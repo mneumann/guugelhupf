@@ -1,0 +1,38 @@
+<sect1><title>TODO</title>
+
+<para>
+
+<sect2><title>Features</title><para>
+  <itemizedList>
+    <listitem><para>PositonInvertedList</para></listitem> 
+    <listitem><para>Zusätzliche Tokenizer (z.B. welche die Datum erkennen, Abkürzungen wie z.B. "I.B.M" etc.)</para></listitem> 
+    <listitem><para>ISO_LATIN CharTable</para></listitem> 
+    <listitem><para>Query-Daemon</para></listitem> 
+    <listitem><para>Archive-Unpacking, Webcrawler</para></listitem> 
+    <listitem><para>Filetype-recognition</para></listitem> 
+    <listitem><para>Query-Webinterface, GUI</para></listitem> 
+    <listitem><para>Approximate Matching</para></listitem> 
+    <listitem><para>Index-Utilities, z.B. Index-Joining</para></listitem> 
+    <listitem><para>Incremental Indexing</para></listitem> 
+    <listitem><para>Stemming</para></listitem> 
+    <listitem><para>Boolean-Query, ADJ, NEAR-matching</para></listitem> 
+  </itemizedList>
+</para></sect2>
+
+
+<sect2><title>Performance</title><para>
+  <itemizedList>
+    <listitem><para>Benutze Memoized-Sets für Indizierer/Invertierte Liste (DocIdMap). Für gleiche Wörter
+      eines Dokumentes gilt dann O(1) anstatt O(log n).</para></listitem> 
+  </itemizedList>
+</para></sect2>
+
+<sect2><title>Andere</title><para>
+  <itemizedList>
+    <listitem><para>Refactoring</para></listitem> 
+    <listitem><para>Decouple Code</para></listitem> 
+    <listitem><para>Rewrite in OO-Sprache (MOBY?)</para></listitem> 
+    <listitem><para>Benutze popt für Kommandozeile (default Arguments etc.)</para></listitem> 
+  </itemizedList>
+</para>
+</sect1>

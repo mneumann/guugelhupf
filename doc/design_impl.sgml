@@ -1,5 +1,10 @@
 <!DOCTYPE ARTICLE PUBLIC "-//FreeBSD//DTD DocBook V4.1-Based Extension//EN" [
+<!ENTITY arch SYSTEM "arch.sgml">
 <!ENTITY hashing SYSTEM "hashing.sgml">
+<!ENTITY lang SYSTEM "lang.sgml">
+<!ENTITY limits SYSTEM "limits.sgml">
+<!ENTITY todo SYSTEM "todo.sgml">
+<!ENTITY install SYSTEM "install.sgml">
 ]>
 
 <article>
@@ -36,10 +41,9 @@
 
   </articleinfo>
 
-  <sect1>
+<!--  <sect1>
     <title>Evaluierung vorhandender Suchmaschinen und Frameworks</title>
     <para>
-     blah blah
     </para>
 
     <sect2><title>Namazu</title></sect2>
@@ -49,16 +53,30 @@
     <sect2><title>Lucene</title></sect2>
     <sect2><title>ht://Dig</title></sect2>
     <sect2><title>Glimpse</title></sect2>
-  </sect1>
+  </sect1>-->
 
-  <sect1>
+<!--  <sect1>
     <title>Zielsetzungen von Guugelhupf</title>
     <para>
     Durchsatzgeschwindigkeit in der Größenordnung GB/h.
     Guugelhupf ist in erster Linie ein Such-Framework und keine konrete Implementierung. Jedoch liegt
     dem Packet eine komplette Suchmaschine bei.</para>
-  </sect1>
+  </sect1> -->
    
+&arch;
+
+&limits;
+
+&todo;
+
+&install;
+
+<!-- appendix -->
+
+&lang;
+
 &hashing; 
+
+
 
 </article>

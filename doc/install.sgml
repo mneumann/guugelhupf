@@ -1,0 +1,38 @@
+<sect1><title>Installation</title>
+<para>
+
+<sect2><title>Requirements</title><para>
+<itemizedList>
+    <listitem><para>Unix-Umgebung (FreeBSD, Linux oder Windows/Cygwin)</para></listitem> 
+    <listitem><para><ulink url="http://www.mlton.org/">MLton</ulink></para></listitem> 
+    <listitem><para><ulink url="http://www.ruby-lang.org/">Ruby</ulink></para></listitem> 
+</itemizedList>
+</para></sect2>
+
+<sect2><title>Compilieren der gh_* Programme</title><para>
+<procedure>
+<step>
+  <para>Compilation Manager installieren:
+    <para><prompt>&prompt.user; cd src/compilation-manager && su -c cp CM.rb /usr/local/bin</prompt></para></para>
+</step>
+
+<step>
+  <para>GH_BASE Umgebungsvariable setzen:
+    <para><prompt>&prompt.user; export GH_BASE=`pwd`</prompt></para></para>
+</step>
+
+<step>
+  <para>Compilieren unter Unix:
+    <para><prompt>&prompt.user; cd src/lib/gh/test && make</prompt></para></para>
+</step>
+
+<step>
+  <para>Compilieren unter Windows/Cygwin:
+    <para><prompt>&prompt.user; cd src/lib/gh/test && make EXE_EXT=.exe</prompt></para></para>
+</step>
+
+
+</procedure>
+
+</para>
+</sect1>

@@ -1,0 +1,305 @@
+<sect1><title>Architektur von Guugelhupf</title>
+
+<para>
+  Guugelhupf besteht, grob gesehen, aus zwei Teilen: 
+  <itemizedList>
+    <listitem><para>Dem Indizierer</para></listitem> 
+    <listitem><para>und dem Abfrage/Query Programm.</para></listitem> 
+  </itemizedList>
+
+<sect2><title>Der Indizierer</title>
+<para>
+  Aus einer beliebigen Anzahl von Dateien erstellt der Indizierer einen schnell zu
+  durchsuchenden Index. 
+</para>
+
+<para>
+  Der Indizierer unterteilt sich selbst wieder in die folgenden Teile:
+  <itemizedList>
+    <listitem><para>Dem Analyser, bestehend aus:
+      <itemizedList>
+        <listitem><para>Einem Tokenizer, und</para></listitem> 
+        <listitem><para>beliebig viele Filter (z.B. LowercaseFilter, StopwordFilter etc.).</para></listitem> 
+      </itemizedList>
+    </para></listitem>
+
+    <listitem><para>Die Datenstruktur zum Aufbau und Speicherung des Index.</para></listitem>
+  </itemizedList>
+
+  <sect3><title>Tokenizer</title><para>
+  In der vorliegenden Version von Guugelhupf ist nur eine Art von Tokenizer implementiert, den wir
+  <emphasis>CharTableTransform-Tokenizer</emphasis> nennen, da er aus einer Lookup-Tabelle besteht, die
+  jedes ASCII Zeichen auf ein anderes ASCII Zeichen abbildet/transformiert, mit der Besonderheit, 
+  daß der ASCII-Wert 0 eine spezielle Bedeutung hat, und zwar ist in diesem Fall das Zeichen ein 
+  <emphasis>Non-Word</emphasis> Zeichen und kann "weggeschmissen" werden. 
+  Ein Wort ist somit definiert als alle Zeichen die von zwei ASCII 0 Zeichen
+  umgrenzt werden. Auch wird mit dieser Art von Tokenizer eine anschließende Konvertierung zu Kleinbuchstaben
+  gespart, indem man eine entsprechende Tabelle verwendet.</para> 
+
+  <para>Der Code hierfür findet sich im Verzeichnis <filename>tokenizer/char-table-transform</filename>.</para>
+  <para>Drei Unterschiedliche Ausprägungen des CharTableTransform-Tokenizers sind vorhanden:
+    <itemizedList>
+      <listitem><para>Memory Mapped (MmapTokenizer)</para></listitem>
+      <listitem><para>Stream (StreamTokenizer)</para></listitem>
+      <listitem><para>String (StringTokenizer)</para></listitem>
+    </itemizedList>
+    wobei der Memory Mapped Tokenizer der schnellste ist, nicht zuletzt weil ein großer Teil in C
+    geschrieben ist. Der <literal>StreamTokenizer</literal> operiert auf Streams (d.h. auch StdIn oder Sockets möglich die
+    nicht unbedingt eine feste Länge besitzen, wie dies für den Einsatz des MmapTokenizer erforderlich ist) 
+    und ist vollständig in SML geschrieben. Aufgrund des Fehlens der Funktion <literal>TextIO.openString</literal> in MLton
+    wird der <literal>StringTokenizer</literal> benötigt, der auf Strings operiert, wie der Name schon sagt.
+   </para>  
+   <para>Zur Erzeugung von Character-Tables kann das Ruby-Script <filename>createCharTable.rb</filename> im 
+   <filename>tools</filename>
+   Verzeichnis verwendet werden. Es erzeugt dann entweder SML-Sourcecode, der in ein Programm einkompiliert werden
+   kann, oder eine Binär-Datei, die erst zur Laufzeit geladen wird.
+   Das Eingabe-File für eine Englische Character-Table könnte z.B. wie folgt aussehen: 
+<programlisting>
+add LOWERCASE
+add UPPERCASE, LOWERCASE
+add DIGITS
+</programlisting>
+  Dies gibt an, daß alle kleinen Buchstaben (LOWERCASE) auf sich selbst abgebildet werden sollen, ebenso wie
+  alle Ziffern (DIGITS). Großbuchstaben (UPPERCASE) jedoch werden auf die entsprechenden Kleinbuchstaben abgebildet.
+  Alle anderen Zeichen besitzen den Wert 0 und werden somit nicht zur Bildung eines Wortes verwendet.
+  </para>
+  <para>Alle Tokenizer haben ein Subset von Funktionen mit gleichem Typ (z.B. <literal>nextToken</literal>), 
+   verdeutlicht wird das durch die Signatur <literal>TOKEN_STREAM</literal> (definiert in Datei 
+   <filename>gh-defs.sml</filename>). Dies trifft auch für alle Filter zu.</para>
+  
+  </para></sect3>
+
+  <sect3><title>Filter</title><para> 
+  Filter haben als Eingabe einen TokenStream und liefern einen veränderten TokenStream als Ausgabe.
+  Die vorliegende Version implementiert nur einen Stopword-Filter, der haufige Wörter einer Sprache 
+  eleminiert. Die zu eleminierenden Wörter können z.B. aus einer Datei gelesen werden, die in jeder
+  Zeile ein Wort enthält. Diese Wörter werden dann einmalig in eine Hashtabelle eingefügt, um später
+  eine schnelle Abfrage zu gewähleisten, ob das Token ein Stopwort ist oder nicht. </para>
+  <para>Der Sourcecode des Stopword-Filters befindet sich im Verzeichnis <filename>filter</filename> in
+  der Datei <filename>stopword-filter.sml</filename>.
+  </para></sect3>
+
+  
+  <sect3><title>Die Index Datenstruktur</title><para>
+  Die gebräuchlichste Datenstruktur für einen Wort-Index ist wohl eine Invertierte Wort Liste. 
+  Diesen Weg haben auch wir gewählt.</para>
+  <para>Zwei Ausprägungen sind denkbar:
+     <itemizedList>
+        <listitem><para>FrequencyInvertedList</para></lititem>
+        <listitem><para>PositionInvertedList</para></lititem>
+     </itemizedList>
+     wobei die <literal>FrequencyInvertedList</literal> nur die Häufigkeiten des Auftretens eines
+     Wortes in einem Dokument speichert, die <literal>PositionInvertedList</literal> dagegen alle 
+     Positionen eines Worten in einem Dokument. Letzteres benötigt sehr viel mehr Speicherplatz,
+     und ist in der Vorliegenden Version noch nicht implementiert. Vorteilhaft dagegen wäre die  
+     Möglichkeit der Abfrage ob Wörter in einem bestimmten Abstand zu anderen Wörtern stehen oder
+     ob diese benachbar sind.
+     </para>
+     <para>
+     Unsere Invertierte Liste verwendet eine Hashtabelle (Datei <filename>ds/hash-table.sml</filename>),
+     und bildet damit die Wörter auf eine Splay-Tree Map ab. Letztere Datenstruktur bildet die Dokument-ID
+     auf die Häufigkeit des Auftretens ab.
+     Es findet also folgende Abbildung statt:
+     <blockquote>
+     token -> docid -> frequency 
+     </blockquote>
+     Bzw. für die <literal>PositionInvertedList</literal>:
+     <blockquote>
+     token -> docid -> position list 
+     </blockquote>
+     </para><para>
+     Der Sourcecode für die Invertierte Liste ist in Datei <filename>ds/inv-list.sml</filename>. 
+     </para>
+
+     <sect4><title>Dateiformat des Index</title><para>
+     Im Folgenden ist die Struktur eines abgespeicherten Index beschrieben. 
+     </para><para>Der Header ist eine 28-Byte große Struktur, die wie folgt 
+     aufgebaut ist:
+    
+     <informaltable>
+     <tgroup cols="3">
+     <thead>
+     <row>
+       <entry>Byte-Position</entry>
+       <entry>Daten-Typ</entry>
+       <entry>Beschreibung</entry>
+     </row>
+     </thead>
+     <tbody>
+     <row><entry>0 - 15</entry><entry>string</entry><entry>Kennung (z.B. "FREQ_INV_LIST   ")</entry></row>
+     <row><entry>16 - 19</entry><entry>dword</entry><entry>Version (z.B. 0x00010000 für 1.0)</entry></row>
+     <row><entry>20 - 23</entry><entry>dword</entry><entry>Flags (z.Z. unbenutzt)</entry></row>
+     <row><entry>24 - 27</entry><entry>dword</entry><entry>Größe des Index (Hashtabelle)</entry></row>
+     </tbody>
+     </informaltable>
+        
+     <para>
+     Daraufhin folgt die Hashtabelle (4*<emphasis>Größe des Index</emphasis> Bytes).
+     Jedes Bucket der Hashtabelle enthält entweder den Offset (relativ zum Ende der Hashtabelle) 
+     auf die Token mit demselben Hashwert, oder bei einem leeren Bucket den Wert -1 (0xFFFFFFFF).</para>
+     <para>
+     Die Daten (d.h. Token und Häufigkeiten) folgen direkt der Hashtabelle.
+     Jedes nicht-leere Bucket wird in der Daten-Sektion wie folgt abgebildet:
+    
+     <informaltable>
+     <tgroup cols="3">
+     <thead>
+     <row>
+       <entry>Byte-Position</entry>
+       <entry>Daten-Typ</entry>
+       <entry>Beschreibung</entry>
+     </row>
+     </thead>
+     <tbody>
+     <row><entry>x - (x+3)</entry><entry>dword</entry><entry>Anzahl der folgenden Tokens</entry></row>
+     </tbody>
+     </informaltable>
+
+     Daraufhin folgt für jedes Token folgende Struktur:
+     
+     <informaltable>
+     <tgroup cols="3">
+     <thead>
+     <row>
+       <entry>Byte-Position</entry>
+       <entry>Daten-Typ</entry>
+       <entry>Beschreibung</entry>
+     </row>
+     </thead>
+     <tbody>
+     <row><entry>y - (y+3)</entry><entry>dword</entry><entry>Anzahl der Dokumente (in denen das Token vorkommt)</entry></row>
+     <row><entry>y+4</entry><entry>byte</entry><entry>Länge des Token-Textes</entry></row>
+     <row><entry>(y+5) - (y+5+n)</entry><entry>string</entry><entry>Token-Text</entry></row>
+     </tbody>
+     </informaltable>
+
+     Hierauf folgt <emphasis>Anzahl der Dokumente</emphasis>-mal:
+
+     <informaltable>
+     <tgroup cols="3">
+     <thead>
+     <row>
+       <entry>Byte-Position</entry>
+       <entry>Daten-Typ</entry>
+       <entry>Beschreibung</entry>
+     </row>
+     </thead>
+     <tbody>
+     <row><entry>z - (z+3)</entry><entry>dword</entry><entry>Dokument-ID</entry></row> 
+     <row><entry>(z+4) - (z+7)</entry><entry>dword</entry><entry>Häufigkeit des Auftretens in diesem Dokument</entry></row> 
+     </tbody>
+     </informaltable>
+
+     </para></sect4> 
+
+
+  </para></sect3>
+
+  <sect3><title>Das Indizier-Programm gh_index</title><para>
+  Das Programm <command>gh_index</command> ist die Schnittstelle für den Benutzer zum 
+  Anlegen eines Indexes. Der Sourcecode befindet sich in Datei <filename>test/index.sml</filename>.
+
+  Man ruft es wie folgt von der Kommandozeile auf:
+  <para>
+  <prompt>&prompt.user; gh_index hashSize charTableFile stopwordFile indexFile docDB</prompt>
+  </para>
+  Die verschiedenen Parameter sind in der folgenden Tabelle erklärt:
+
+     <informaltable>
+     <tgroup cols="2">
+     <thead>
+     <row>
+       <entry>Parameter</entry>
+       <entry>Beschreibung</entry>
+     </row>
+     </thead>
+     <tbody>
+     <row><entry>hashSize</entry><entry>Hiermit kann man die Größe der Hashtabelle angeben.</entry></row>
+     <row><entry>charTableFile</entry><entry>Die zu verwendente Char-Table Datei.</entry></row>
+     <row><entry>stopwordFile</entry><entry>Datei, die zu verwendende Stopwörter enthält.</entry></row>
+     <row><entry>indexFile</entry><entry>Index-Datei, die erzeugt werden soll.</entry></row>
+     <row><entry>docDB</entry><entry>Name der Dokument-Datenbank (ohne Endung .db).</entry></row>
+     </tbody>
+     </informaltable>
+
+     <command>gh_index</command> &nbsp; erwartet auf der Standard-Eingabe die Namen der Dateien, die es indizieren 
+     soll. Es können auch zwei Dateinamen, getrennt durch ein TAB-Zeichen angegeben werden, woraufhin
+     <command>gh_index</command> &nbsp; die erste verwendet um die Datei zu tokenizen, die zweite jedoch in der 
+     Dokument-Datenbank abspeichert. Dies hat denn Sinn und Zweck, daß z.B. auch Webseiten indiziert werden können 
+     (müssen zuvor als lokale Datei gespeichert werden), ohne daß dabei die URL verloren geht.
+
+     </para><para>
+     Die Dokument-Datenbank ist eine DBM Hash-Datenbank, in der zu jeder Dokument-ID der zugehörige Dateiname steht. 
+     Eine DocDB kann auch für mehrere Indexe verwendet werden.
+     Der Sourcecode des DBM-Interface für SML ist im Verzeichnis <filename>dbm</filename> zu finden (Dateien
+     <filename>dbm.c</filename> und <filename>dbm.sml</filename>). 
+     </para>
+     <!-- TODO: Describe usage of "find" or other program -->
+  </para></sect3>
+
+</sect2>
+
+<sect2><title>Das Abfrage/Query Programm</title>
+<para>
+Das Query-Programm besteht aus einem <literal>RankingParser</literal> (Files <filename>query/ranking-parser.sml</filename>
+und <filename>query/ranking.lex</filename>), der Struktur <literal>RankedQuery</literal> (File <filename>query/ranked-query.sml</filename>) sowie dem Sourcecode für das Programm selbst (<filename>test/query.sml</filename>). 
+Der eigentliche Zugriff auf die Index-Datei findet in der InvertedList Struktur in Datei <filename>ds/inv-list.sml</filename> 
+statt, oder falls eine extrem schnelle und Resourcen-schonende Version benötigt wird, kann <filename>ds/query-inv-list.c</filename>
+verwendet werden.
+</para><para>
+Der <literal>RankingParser</literal> transformiert eine Eingabe, wie etwa folgende:
+<blockquote>
+(+10)IR -diode +information retrieval
+</blockquote>
+in eine Liste von <literal>RankedTerm</literal>'s:
+<blockquote>
+[RankedTerm(IR, 10), RankedTerm(diode, -1), RankedTerm(information, 1), RankedTerm(retrieval, 1)]
+</blockquote>
+</para>
+<para>
+<literal>RankedQuery</literal> führt eine Abfrage auf den Index durch und berechnet für jedes auftretende 
+Dokument einen Score. 
+Die Dokumente sortiert nach absteigendem Score werden dann schließlich vom Hauptprogramm <command>gh_query</command>
+ausgegeben.
+</para>
+
+  <sect3><title>Das Query-Programm gh_query</title><para>
+
+  Das Programm <command>gh_query</command> ist die Schnittstelle für den Benutzer zum 
+  Abfragen eines Indexes. Der Sourcecode befindet sich in Datei <filename>test/query.sml</filename>.
+
+  Man ruft es wie folgt von der Kommandozeile auf:
+  <para>
+  <prompt>&prompt.user; gh_query charTableFile stopwordFile indexFile docDB</prompt>
+  </para>
+  Die verschiedenen Parameter sind in der folgenden Tabelle erklärt:
+
+     <informaltable>
+     <tgroup cols="2">
+     <thead>
+     <row>
+       <entry>Parameter</entry>
+       <entry>Beschreibung</entry>
+     </row>
+     </thead>
+     <tbody>
+     <row><entry>charTableFile</entry><entry>Die zu verwendente Char-Table Datei.</entry></row>
+     <row><entry>stopwordFile</entry><entry>Datei, die zu verwendende Stopwörter enthält.</entry></row>
+     <row><entry>indexFile</entry><entry>Index-Datei, die abgefragt werden soll.</entry></row>
+     <row><entry>docDB</entry><entry>Name der Dokument-Datenbank (ohne Endung .db).</entry></row>
+     </tbody>
+     </informaltable>
+
+     <command>gh_query</command> &nbsp; erwartet auf der Standard-Eingabe eine Abfrage (siehe weiter oben).
+     Daraufhin gibt das Programm auf der Standard-Ausgabe die passenden Dokumente geordnet nach höchstem
+     Score aus.
+
+  </para></sect3>
+
+</para>
+</sect2>
+
+
+</para>
+
+</sect1>

@@ -1,0 +1,11 @@
+<sect1><title>Limitations</title>
+<para>
+
+<itemizedList>
+    <listitem><para>Maximale Wortlänge von 255 Zeichen.</para></listitem> 
+    <listitem><para>Maximale Index-Größe von 4 GB.</para></listitem> 
+    <listitem><para>Maximal 2^32 Dokumente pro Index/DocDB.</para></listitem> 
+</itemizedList>
+
+</para>
+</sect1>

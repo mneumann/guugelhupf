@@ -1,0 +1,78 @@
+<sect1><title>Wahl der geeigneten Programmiersprache</title>
+
+  <sect2><title>Kriterien für die Auswahl</title>
+  <para>
+    <itemizedList>
+      <listitem>
+        <para>
+          Performance! Primäres Ziel ist eine rasche Indexierung, die wenn möglich im Bereich von 
+          MB/sec liegen sollte (bezogen auf einen herkömmlichen Computer z.B. Athlon 1000 MHz).  
+        </para>
+      </listitem>
+
+      <listitem>
+        <para>
+          Ausdruckskraft der Sprache (d.h. wie gut können Probleme beschrieben/gelöst werden)
+          <!--<footnote><para>
+          Am besten wäre eine Sprache für die folgendes gälte: "Ideas flow directly into the code".
+          </para></footnote>. -->
+          Darunter sollte jedoch die Leserlichkeit des Programmes nicht leiden.
+        </para>
+      </listitem>
+
+      <listitem>
+        <para>
+          Bevorzugt werden Sprachen mit automatischer Speicherfreigabe (Reference Tracing/Counting oder Regions),
+          da dies eine enorme Steigerung der Produktivität für den Programmierer darstellt und sich nicht erheblich 
+          auf die Performance auswirkt.
+        </para>
+      </listitem>
+
+      <listitem>
+        <para>
+          Vorhandensein von geeigneten Algorithmen und Datenstrukturen wie z.B. Splaytrees oder RB-Trees.
+        </para>
+      </listitem>
+
+      <listitem>
+        <para>
+          Leichtes Interfacing mit C.
+        </para>
+      </listitem>
+
+      <listitem>
+        <para>
+          Natürlich sollte auch die eigene Qualifikation in der jeweiligen Programmiersprache 
+          in Betracht gezogen werden. Dies haben wir hier jedoch nicht getan.
+        </para>
+      </listitem>
+
+    </itemizedList>
+
+  </para>
+  </sect2>
+
+
+  <sect2><title>Vorstellung der evaluierten Sprachen</title>
+
+    <para>
+    Folgende Sprachen wurden unter die Lupe genommen:
+    <itemizedList>
+      <listitem><para>C++</para></listitem>
+      <listitem><para>Java</para></listitem>
+      <listitem><para>Objective Caml</para></listitem>
+      <listitem><para>Standard ML</para></listitem>
+      <listitem><para>Ada 95</para></listitem>
+      <listitem><para>Eiffel</para></listitem>
+      <listitem><para>Modula 3</para></listitem>
+      <listitem><para>Ruby</para></listitem>
+    </itemizedList>
+
+    </para>
+
+    <emphasis>TO BE WRITTEN</emphasis>    
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+  </sect2>
+
+</sect1>
