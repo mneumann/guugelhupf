@@ -1,8 +1,8 @@
 structure StreamTokenizer :>
 sig
    include TOKEN_STREAM
-   val new (string * string) -> t  
-   val new2 (TextIO.instream * string) -> t
+   val new : (string * string) -> t  
+   val new2 : (TextIO.instream * string) -> t
    val free : t -> unit
 end = 
 struct
@@ -56,10 +56,11 @@ struct
                                      TextIO.input1 stream;
                                      if l = #"\000" then false (* whitespace *)
                                      else ( 
-                                        if (Word.inc buflen) >= maxWordLen then false
+                                        if Int.inc buflen >= maxWordLen then false
                                         else true )
                                   end)
                else false
+            end
 
       in
          skipws ();
@@ -69,7 +70,7 @@ struct
          else
             SOME (Token {term = CharArray.extract (buf, 0, SOME (!buflen)),
                          position = Word.inc wordPos,
-                         kine = NONE})
+                         kind = NONE})
       end
 end
 
