@@ -1,0 +1,14 @@
+Group is
+# independent packages
+../smlnj/lib.cm
+../misc/all.cm
+../io/io.cm
+../hashing/hashing.cm
+../dbm/dbm.cm
+
+../gh-defs.sml
+
+# other
+../ds/ds.cm
+../filter/filter.cm
+../tokenizer/tokenizer.cm

@@ -1,14 +1,4 @@
 Group is
-# independent packages
-../smlnj/lib.cm
-../misc/all.cm
-../io/io.cm
-../hashing/hashing.cm
-
-../gh-defs.sml
-
-# other
-../ds/ds.cm
-
-# 
+common.cm
+../query/query.cm
 query.sml

@@ -1,31 +1,31 @@
-fun query terms = 
-   let 
-      open DS
+open Tokenizer.CharTableTransform
 
-      fun outputOccurences [] = ()
-        | outputOccurences ((docid, freq)::xs) = 
-         let 
-            val wordToString = Int.toString o Word.toInt
-            val str = "DocId: " ^ wordToString docid ^ "\t\tFrequency: " ^ wordToString freq ^ "\n"
-         in
-            print str;
-            outputOccurences xs
-         end
+fun main (name, args) = 
+let
+   val usage = "USAGE: " ^ name ^ ": charTableFile stopwordFile indexFile docDB"  
 
-      fun outputResult (term, occurences) = 
-         let
-         in
-            print (term ^ ": \n");
-            outputOccurences occurences
-         end
- 
-      val res = FrequencyInvertedList.lookupTermsInFile {
-                   file = "/tmp/index", 
-                   hash = Hashing.sdbmHash,
-                   terms = terms }
+   val _ = if List.length args <> 4 then raise Fail(usage) else ()
 
-   in
-      List.app outputResult res
-   end
+   val [charTableFile, stopwordFile, indexFile, docDB] = args
 
-val _ = query (CommandLine.arguments ());
+   val db = DBM.openReadOnly docDB 
+
+   val q = RankedQuery.query {strm = TextIO.stdIn, 
+                              charTable = mkCharTableFromFile charTableFile,  
+                              stopwordTable = SimpleAnalyser.TS.mkTableFromFile stopwordFile, 
+                              outputFn = (fn s => TextIO.output (TextIO.stdErr, s)),
+                              file = indexFile,
+                              hash = Hashing.sdbmHash,
+                              scoreFn = (fn {freq, rank} => freq * rank) }
+
+   fun output (docid, rank) =
+      let
+         val file = DBM.lookup db (Misc.Pack.packWord docid)
+      in
+         print (Int.toString rank ^ "\t" ^ file ^ "\n")
+      end
+in 
+   List.app output q
+end
+
+val _ = main(CommandLine.name (), CommandLine.arguments ())
