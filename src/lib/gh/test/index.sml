@@ -1,3 +1,7 @@
+(*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ *)
+
 open Tokenizer.CharTableTransform
 
 fun main (name, args) =
