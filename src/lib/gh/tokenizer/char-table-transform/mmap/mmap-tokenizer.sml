@@ -1,0 +1,62 @@
+(** package DE.FantasyCoders.GH.Tokenizer.CharTableTransform; *)
+
+structure MmapTokenizer :>
+  sig 
+    type t 
+    val new : (Posix.IO.file_desc * int) -> t
+    val new2 : string -> t
+    val free : t -> unit
+    val nextToken : t -> string option 
+  end = 
+  struct 
+
+    exception Error of string
+
+    structure Prim = 
+      struct
+        type t = Misc.CStruct.t
+        val structSize = _ffi "MmapTokenizer_structSize" : int;
+        val maxWordLen = _ffi "MmapTokenizer_maxWordLen" : int;
+        val init = _ffi "MmapTokenizer_init" : (t * word * int) -> bool;
+        val free = _ffi "MmapTokenizer_free" : t -> unit;
+        val nextToken = _ffi "MmapTokenizer_nextToken" : 
+               (t * string (* ct *) * CharArray.array (* buf *)) -> int;
+      end (* Prim *)
+
+    datatype t = T of {prim: Prim.t, fd : Posix.IO.file_desc,
+                       charTable: string, buf: CharArray.array}
+
+    fun new (fd : Posix.IO.file_desc, len : int, ct : string) : t = let
+      val s = Misc.CStruct.new Prim.structSize
+      val b = CharArray.array (Prim.maxWordLen, #"\000")
+    in
+      if (String.size ct) <> 256 
+      then raise Error("charTable is of wrong size (should be 256)")
+      else (); 
+
+      if Prim.init (s, Posix.FileSys.fdToWord fd, len) then
+        T {prim = s, fd = fd, charTable = ct, buf = b}
+      else
+        raise Error("Failed to memory map file")
+    end
+
+    fun new2 (fileName : string, ct : string) : t = let
+      open Posix.FileSys
+      val fd = openf (fileName, O_RDONLY, 0w0)
+      val sz = ST.size (stat fileName)
+    in
+      new (fd, sz, ct)
+    end
+
+    fun free (T {prim = s, ...}) = Prim.free s
+
+    fun nextToken (T {prim = s, charTable = ct, buf = b, ...}) = let
+      val sz = Prim.nextToken (s, ct, b) 
+    in 
+      if sz = 0 then
+        NONE
+      else
+        SOME (CharArray.extract (b, 0, SOME (sz))) 
+    end
+
+  end;
