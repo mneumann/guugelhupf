@@ -45,8 +45,6 @@ sdbm_hash(char* str, int length) {
 const Word headerSize = 28;
 const Word emptyBucket = 0xFFFFFFFF;
 
-const Word HASH_mask = 1;
-
 struct FreqInvList_Header {
    char kennung[16];
    Word version;
@@ -155,14 +153,8 @@ FreqInvList_query(struct FreqInvList_Struct* s, char *key) {
 
   while (numTokens-- > 0) {
 
-    if (s->header.flags & HASH_mask) hash = *((Word*)ptr)++;
     numDocs = *((Word*)ptr)++;
     termSize = *((unsigned char*)ptr)++;
-
-    if ((s->header.flags & HASH_mask) && hash != ix) {
-      ptr += termSize + (numDocs*8);
-      continue;
-    }
 
     if (strncmp(ptr, key, termSize) == 0) { 
       /* key found */
