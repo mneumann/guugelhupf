@@ -23,7 +23,7 @@ struct
          raise OS.SysErr ("", SOME (err))
       end
 
-   fun check (i:int) : int = if i = ~1 then failure () else i 
+   fun check (i:int) : unit = if i = ~1 then failure () else () 
 
    val fdToWord = Posix.FileSys.fdToWord
 
