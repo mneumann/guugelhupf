@@ -5,10 +5,10 @@
 structure DBM :> sig
 
    type dbm
+
    val new : string -> dbm
    val new2 : (string * word * word) -> dbm
    val close : dbm -> unit
-
    val insertIfNew : dbm -> (string * string) -> unit
    val insertOrReplace : dbm -> (string * string) -> unit
    val delete : dbm -> string -> unit
@@ -20,6 +20,7 @@ end = struct
 
    structure Prim = struct
       type dbm = word
+
       val errno = _ffi "errno" : word;
       val dbm_open = _ffi "DBM_open" : (string * word * word) -> dbm;
       val dbm_close = _ffi "DBM_close" : dbm -> unit;
@@ -27,7 +28,6 @@ end = struct
       val dbm_delete = _ffi "DBM_delete" : (dbm * string) -> int; 
       val dbm_fetch = _ffi "DBM_fetch" : (dbm * string * Misc.CStruct.t) -> int; 
       val dbm_fetch_buf = _ffi "DBM_fetch_buf" : (Misc.CStruct.t * CharArray.array) -> unit; 
-
       val dbm_error = _ffi "DBM_error" : dbm -> word;
       val dbm_clearerr = _ffi "DBM_clearerr" : dbm -> int;
       val dbm_dirfno = _ffi "DBM_dirfno" : dbm -> int;
@@ -38,12 +38,12 @@ end = struct
       val O_EXCL = _ffi "DBM_O_EXCL" : word;
       val O_FSYNC = _ffi "DBM_O_FSYNC" : word;
       val O_NOFOLLOW = _ffi "DBM_O_NOFOLLOW" : word;
-
       val DBM_INSERT = _ffi "DBM_INSERT_C" : word;
       val DBM_REPLACE = _ffi "DBM_REPLACE_C" : word;
    end;
 
    exception Error of (OS.syserror * string)
+
    type dbm = Prim.dbm
 
    fun failure errno = 
