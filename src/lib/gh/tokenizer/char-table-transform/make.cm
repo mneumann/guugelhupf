@@ -3,3 +3,4 @@ german.sml
 english.sml
 mmap/mmap-tokenizer.sml
 mmap/mmap-tokenizer.o
+stream/stream-tokenizer.sml
