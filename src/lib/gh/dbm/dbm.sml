@@ -92,8 +92,6 @@ end = struct
 
    val insert = insertIfNew
 
-      
-
    fun delete (db: dbm) (key: string) =  
       let
          val res = Prim.dbm_delete (db, key)
@@ -142,7 +140,7 @@ end = struct
          else true
      end
 
-   val hasKey = inDomain (* synonyme *)
+   val hasKey = inDomain (* synonym *)
 
    fun replace (db: dbm) (key: string, data: string) = 
       if not (inDomain db key) then raise Error (0, "dbm: Failed to replace entry. Entry do not exist!")
