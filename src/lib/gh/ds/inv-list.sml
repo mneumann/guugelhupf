@@ -75,7 +75,6 @@ struct
 
       val emptyBucket = 0wxFFFFFFFF  (* representation of an empty bucket in the file *)
       val headerSize = 28
-      val HASH = 0wxb1               (* flag *)
       val kennung = "FREQ_INV_LIST   " 
       val version = 0wx00010000      (* major = upper word (2-byte), minor = lower *) 
 
@@ -99,8 +98,6 @@ struct
         val indexOffs = Word.fromInt headerSize
         val dataOffs = Word.fromInt headerSize + (indexSize * 0w4)
         
-        val bWriteHash = Word.andb (flags, HASH) <> 0 
-
         fun lookupTerm (term: string) : (doc_id * word) list =
            let
               val hv = hash term
@@ -108,7 +105,6 @@ struct
               val bucket = readWordAtPos fd (indexOffs + ix * 0w4) 
 
              (*
-              * (optional) hash: word32   (* write if bWriteHash = true *) 
               * numDocs: word32 
               * termSize: word8
               * termText: termSize bytes
@@ -163,15 +159,13 @@ struct
          val numBuckets = HashTable.numBuckets hashTable
          val dataOffs = headerSize + (numBuckets*4)
 
-         val bWriteHash = false (* TODO: make an option *)
-
          val fdi = creat (filename, S.irwxu) (* write the header and the index (hash) *)
          val fdc = openf (filename, O_WRONLY, 0w0)  (* write the content of the inverted list *)
          val _ = setPos fdc (Word.fromInt dataOffs) (* position file pointer after index *)
 
          fun writeHeader () = 
             let
-               val flags = if bWriteHash then HASH else 0w0 
+               val flags = 0w0
                val indexSize = Word.fromInt numBuckets 
             in
                writeString fdi kennung; (* 16 bytes *)
@@ -183,7 +177,6 @@ struct
             end
  
          (*
-          * (optional) hash: word32   (* write if bWriteHash = true *) 
           * numDocs: word32 
           * termSize: word8
           * termText: termSize bytes
@@ -205,7 +198,6 @@ struct
                     writeWord fdc frequency
                  end
             in
-               if bWriteHash then writeWord fdc hash else ();
                writeWord fdc numDocs;
                writeWord8 fdc termSize;
                writeString fdc termText;
@@ -239,23 +231,4 @@ struct
       end
         
       end (* local *) 
-
-
-(*
-   structure Query =
-   struct
-     datatype t = T of {fd: Posix.FileSys.file_desc, index: word array, hash: string -> word}
-    
-     fun new {hash, file} = 
-        let
-           open Posix.FileSys
-           (*open Posix.IO*)
- 
-           val fd = openf (file, O_RDONLY, 0w0)
-
-        in
-        end   
-
-   end
- *)  
 end
