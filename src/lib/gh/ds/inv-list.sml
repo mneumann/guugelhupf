@@ -77,14 +77,15 @@ struct
          val buckets = HashTable.getBuckets hashTable
          val numBuckets = HashTable.numBuckets hashTable
 
-         val emptyBucket = 0w0
+         val emptyBucket = 0wxFFFFFFFF
          val headerSize = 28
+         val dataOffs = headerSize + (numBuckets*4)
 
          val bWriteHash = false (* todo: make an option *)
 
          val fdi = creat (filename, S.irwxu) (* writes the header and the index (hash) *)
          val fdc = openf (filename, O_WRONLY, 0w0)  (* writes the content of the inverted list *)
-         val _ = lseek (fdc, headerSize + (numBuckets*4), SEEK_SET)  
+         val _ = lseek (fdc, dataOffs, SEEK_SET)  
 
          fun getPos fd = lseek (fd, 0, SEEK_CUR)
 
@@ -147,7 +148,7 @@ struct
          fun writeBucket (lst : (word * string * posting DocIdMap.map ref) list) = 
             let
                val numTokens = Word.fromInt (List.length lst)
-               val offs = Word.fromInt (getPos fdc)
+               val offs = Word.fromInt (getPos fdc - dataOffs)
             in
                if numTokens = 0w0 then 
                   writeWord fdi emptyBucket
