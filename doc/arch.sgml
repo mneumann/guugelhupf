@@ -234,7 +234,36 @@ add DIGITS
      Der Sourcecode des DBM-Interface für SML ist im Verzeichnis <filename>dbm</filename> zu finden (Dateien
      <filename>dbm.c</filename> und <filename>dbm.sml</filename>). 
      </para>
-     <!-- TODO: Describe usage of "find" or other program -->
+
+
+    <sect4><title>Das Hilfprogramm gh_conv</title><para>
+    Da <command>gh_index</command> eine Liste von Dateinamen von StdIn ließt, muß man diese
+    irgenwie generieren. Unter UNIX bietet sich hierfür das Programm <command>find</command> an: 
+    <para><prompt>&prompt.user; find . -type f -print</prompt></para>
+    liefert rekusiv eine Liste aller Dateien beginnend vom aktuellen Verzeichnis. Mit Hilfe von Pipes kann
+    man dies nun <command>gh_index</command> &nbsp; auf StdIn umleiten:
+    <para><prompt>&prompt.user; find . -type f -print | gh_index ...</prompt></para>
+    Das Ruby-Skript <command>gh_conv</command> &nbsp; kann dies ebenso, dient aber vorwiegend zur Konvertierung
+    sowie Filterung verschiedener Dateitypen. So ermittelt <command>gh_conv</command> &nbsp; den Dateityp 
+    durch das UNIX-Hilfsprogramm <command>file</command>&nbsp; und reagiert entsprechend dem Dateityp. Es kann:
+    <itemizedList>
+      <listitem><para>Dateien ignorieren (<literal>:REJECT</literal>); sinnvoll bei Videos, Bildern oder Audio-Files
+         </para></listitem> 
+      <listitem><para>Dateien <emphasis>as is</emphasis> passieren lassen (<literal>:ASIS</literal>)</para></listitem>
+      <listitem><para>ein externes Datei-Konvertierung Programm aufrufen (z.B. lynx, ps2ascii oder catdoc)</para></listitem>
+    </itemizedList>
+
+    Aktionen für weitere Dateitypen können hinzugefügt werden, indem man im Programm (Datei 
+    <filename>test/gh_conv</filename>) das Array FILE_TYPE_LIST entsprechend erweitert.
+
+    <para>
+    Aufrufen kann man es auf zwei Arten:
+    <para><prompt>&prompt.user; find . -print | gh_conv | gh_index ....</prompt></para>
+    <para><prompt>&prompt.user; gh_conv /start/dir | gh_index ....</prompt></para>
+    </para>
+
+    </para></sect4>
+     
   </para></sect3>
 
 </sect2>

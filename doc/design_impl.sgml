@@ -22,6 +22,20 @@
 	  </address>
 	</affiliation>
       </author>
+
+      <!-- fake author -->
+      <author>
+        <firstname>Werner</firstname>
+	
+	<surname>Maier</surname>
+
+	<affiliation>
+	  <address>
+	    <email>werner@maier-web.net</email>
+	  </address>
+	</affiliation>
+      </author>
+
     </authorgroup>
 
     <copyright>
@@ -29,40 +43,20 @@
       <holder>Michael Neumann</holder>
     </copyright>
 
-    <pubdate role="rcs">$Revision$</pubdate>
-
-    <abstract>
-      <para>Dieses Dokument beschreibt Ideen und Zielsetzungen die die Grundlage der Implementierung 
-            von Guugelhupf, einem Suchmaschinen-Framework, bilden. Ebenfalls Inhalt dieses Dokumentes
-            sind Abwägungen sowie Aspekte der Implementierung, wie z.B. Wahl der Programmiersprache oder 
-            Performanceprobleme. Auch werden wir Guugelhupf mit anderen verfügbaren Suchmaschinen bzw. 
-            -Frameworks vergleichen um besser die Unterschiede bzw. Gemeinsamkeiten aufzeigen zu können.</para>
-    </abstract>
-
   </articleinfo>
 
-<!--  <sect1>
-    <title>Evaluierung vorhandender Suchmaschinen und Frameworks</title>
-    <para>
-    </para>
-
-    <sect2><title>Namazu</title></sect2>
-    <sect2><title>udmsearch</title></sect2>
-    <sect2><title>Isearch</title></sect2>
-    <sect2><title>Amberfish (tm)</title><para>Commercial successor of Isearch</para></sect2>
-    <sect2><title>Lucene</title></sect2>
-    <sect2><title>ht://Dig</title></sect2>
-    <sect2><title>Glimpse</title></sect2>
-  </sect1>-->
-
-<!--  <sect1>
+  <sect1>
     <title>Zielsetzungen von Guugelhupf</title>
     <para>
-    Durchsatzgeschwindigkeit in der Größenordnung GB/h.
-    Guugelhupf ist in erster Linie ein Such-Framework und keine konrete Implementierung. Jedoch liegt
-    dem Packet eine komplette Suchmaschine bei.</para>
-  </sect1> -->
-   
+    <itemizedList>
+      <listitem><para>Performance. Durchsatzgeschwindigkeit in der Größenordnung GB/h.</para></listitem>
+      <listitem><para>Guugelhupf soll in erster Linie ein Framework und keine konkrete Implementierung sein.</para></listitem>
+      <listitem><para>Ausprobieren neuer/alter Paradigmen/Sprachen (wie z.B. strukturiertes Programmieren in SML
+       anstelle von OOP).</para></listitem>
+    </itemizedList>
+    </para>
+  </sect1> 
+
 &arch;
 
 &limits;
@@ -77,6 +71,21 @@
 
 &hashing; 
 
+  <sect1>
+    <title>Evaluierung vorhandender Suchmaschinen und Frameworks</title>
+
+    <sect2><title>Namazu</title></sect2>
+    <sect2><title>udmsearch</title></sect2>
+    <sect2><title>Isearch</title></sect2>
+    <sect2><title>Amberfish (tm)</title><para>Commercial successor of Isearch</para></sect2>
+    <sect2><title>Lucene</title></sect2>
+    <sect2><title>ht://Dig</title></sect2>
+    <sect2><title>Glimpse</title></sect2>
+
+    <para>
+     <emphasis>TO BE WRITTEN</emphasis>
+    </para>
+  </sect1>
 
 
 </article>
