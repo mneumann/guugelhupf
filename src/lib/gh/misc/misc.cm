@@ -1,4 +1,5 @@
 Package Misc is
 cstruct.sml
 pack.sml
+!make pack.o
 pack.o

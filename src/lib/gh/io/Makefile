@@ -1,4 +1,8 @@
-all:
-	cc -c -O3 -fomit-frame-pointer -I/usr/local/lib/mlton/self/include io.c
+include ${GH_BASE}/mk/mlton.mk
+
+OBJS=io.o
+
+all: $(OBJS)
+
 clean:
-	rm -f io.o
+	rm -f $(OBJS)

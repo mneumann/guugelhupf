@@ -1,6 +1,5 @@
-include ${GH_BASE}/mk/mk.include
+include ${GH_BASE}/mk/mlton.mk
 
-CFLAGS+=-I$(MLTON_LIB)/self/include
 OBJS=dbm.o
 
 all: $(OBJS)
