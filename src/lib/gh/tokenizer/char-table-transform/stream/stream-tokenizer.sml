@@ -72,5 +72,9 @@ struct
                          position = Word.inc wordPos,
                          kind = NONE})
       end
+
+    val map = TokenStream0.map nextToken
+    val app = TokenStream0.app nextToken
+    val toList = TokenStream0.toList nextToken
 end
 
