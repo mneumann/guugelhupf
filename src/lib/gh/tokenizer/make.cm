@@ -1,2 +1,3 @@
-Package Tokenizer is
-char-table-transform/make.cm
+Group is
+token.sml
+tokenizer.cm
