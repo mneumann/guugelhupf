@@ -80,6 +80,44 @@ fun insert (HT{buckets, equals, hash, mask, numItems, ...}) (key, item) =
      Array.update (!buckets, ix, ins bucket)
    end
 
+(* Insert an item if key not in table. *)
+fun insertIfNew (HT{buckets, equals, hash, mask, numItems, ...}) (key, item) = 
+   let
+      val hv = hash key
+      val ix = index (hv, !mask)
+      val bucket = Array.sub (!buckets, ix)
+
+      fun ins [] = (Int.inc numItems; [(hv, key, item)]) (* new key *) 
+        | ins (lst as ((t as (h, k, i)) :: xs)) = 
+             if hv = h andalso equals (key, k) (* key exists -> exit *)
+                then lst
+             else
+                t :: (ins xs)
+   in
+     Array.update (!buckets, ix, ins bucket)
+   end
+
+(* check whether key exits *)
+fun inDomain (HT{buckets, equals, hash, mask, ...}) key = 
+   let
+      val hv = hash key
+      val ix = index (hv, !mask)
+      val bucket = Array.sub (!buckets, ix)
+
+      fun find [] = false (* key does not exist *)
+        | find ( (h, k, _) :: xs ) =
+             if hv = h andalso equals (key, k) (* key exists *)
+                then true 
+             else
+                find xs
+   in
+      find bucket
+   end
+
+(* synonym for inDomain *)
+val hasKey = inDomain
+
+
 (* If item does not exist, insert it into table. Otherwise just return the value. *)
 fun lookupOrInsert (HT{buckets, equals, hash, mask, numItems, ...}) (key, item) =
    let
@@ -159,7 +197,6 @@ fun listItemsi (HT{buckets, ...}) =
    end
 
 end
-(* inDomain *)
 
 (* 
 fun hashString (s:string) = Word.fromInt(String.size s);
