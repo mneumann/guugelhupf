@@ -1,5 +1,3 @@
-type doc_id = word
-
 structure FrequencyInvertedList = 
 struct
    structure DocIdMap = SplayMapFn (struct 
