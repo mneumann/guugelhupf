@@ -1,6 +1,8 @@
-(* 
- * Global definitions for GH 
+(*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
  *)
+
+(* Global definitions for GH  *)
 
 
 (* Document ID *)
@@ -22,4 +24,3 @@ signature TOKEN_STREAM =
      val app : (token -> unit) -> t -> unit
      val map : (token -> 'a) -> t -> 'a list  
   end
-
