@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ */
+
 #if (defined (__FreeBSD__))
 #include <sys/types.h>
 #endif

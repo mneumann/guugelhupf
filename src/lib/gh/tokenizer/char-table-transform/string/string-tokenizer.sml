@@ -1,3 +1,7 @@
+(*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ *)
+
 (* required, because MLton do not support TextIO.openString *)
 
 structure StringTokenizer :>

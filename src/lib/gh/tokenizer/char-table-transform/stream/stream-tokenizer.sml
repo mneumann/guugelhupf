@@ -1,3 +1,7 @@
+(*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ *)
+
 structure StreamTokenizer :>
 sig
    include TOKEN_STREAM
@@ -77,4 +81,3 @@ struct
     val app = TokenStream0.app nextToken
     val toList = TokenStream0.toList nextToken
 end
-

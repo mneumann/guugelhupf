@@ -1,3 +1,7 @@
+#
+# Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+#
+
 LOWERCASE = ('a'..'z').to_a.join
 UPPERCASE = ('A'..'Z').to_a.join
 DIGITS    = ('0'..'9').to_a.join
