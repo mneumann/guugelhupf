@@ -1,4 +1,9 @@
-all:
-	cc -c -O3 -fomit-frame-pointer -I/usr/local/lib/mlton/self/include sdbm-hash.c
+include ${GH_BASE}/mk/mk.include
+
+CFLAGS+=-I$(MLTON_LIB)/self/include
+OBJS=sdbm-hash.o
+
+all: $(OBJS)
+
 clean:
-	rm -f sdbm-hash.o
+	rm -f $(OBJS)

@@ -1,3 +1,4 @@
 Package Hashing is
 sdbm-hash.sml
+!make sdbm-hash.o
 sdbm-hash.o
