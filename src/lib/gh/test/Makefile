@@ -1,8 +1,18 @@
-all: clean
+# on Windows: make EXE_EXT=.exe 
+
+all: gh_index$(EXE_EXT) gh_query$(EXE_EXT) 
+
+gh_index$(EXE_EXT): 
+	rm -f x.sml
 	CM.rb index.cm
-	mv x i
+	mv x $@
 	rm x.sml
-	CM.rb query.cm 
-	mv x q
+
+gh_query$(EXE_EXT): 
+	rm -f x.sml
+	CM.rb query.cm
+	mv x $@
+	rm x.sml
+
 clean:
-	rm -f x.sml i q
+	rm -f x.sml gh_index$(EXE_EXT) gh_query$(EXE_EXT)
