@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 #
 # A simple compilation manager for MLton, which supports Groups, 
-# Packages and Objectfiles.
+# Packages, Objectfiles and arbitrary commands.
 #
 # Copyright (c) 2001, 2002 Michael Neumann <neumann@s-direktnet.de>
 # 
@@ -29,29 +29,49 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $Id:$
-#
 
 
 class Source
   attr_reader :path
-  def initialize(path)
-    @path = path
-    raise "File <#@path> do not exists!" unless File.exists? @path
+  def initialize(path, dir=nil)
+    if path.strip[0,1] == '!' then
+      @command = path.strip[1..-1].strip 
+      @dir = dir || Dir.pwd
+
+      # execute command
+      print @command, " (#{@dir})\n"
+      cur_dir = Dir.pwd
+      Dir.chdir(@dir)
+      print `#{@command}`
+      Dir.chdir(cur_dir)
+
+    else
+      if path[0,1] == "/" or dir.nil?
+        @path = path
+      else
+        @path = File.join(dir, path)
+      end
+
+      raise "File <#@path> do not exists!" unless File.exists? @path
+    end
   end
 
   def kind
-    name = File.basename @path
-    suffix = name.split(".").last
-    case suffix.downcase
-    when 'sml', 'sig', 'fun'
-      :SML
-    when 'cm'
-      :CM
-    when 'o'
-      :OBJ
+    if @command then
+      :COMMAND
     else
-      raise "unknown file type"
+      name = File.basename @path
+      suffix = name.split(".").last
+      case suffix.downcase
+      when 'sml', 'sig', 'fun'
+        :SML
+      when 'cm'
+        :CM
+      when 'o'
+        :OBJ
+      else
+        raise "unknown file type"
+      end
     end
   end
 
@@ -61,6 +81,8 @@ class Source
       File.readlines(@path).to_s
     when :CM
       CM.new(@path).content(object_files)
+    when :COMMAND
+      # do nothing
     else
       raise "file type does not support content"
     end
@@ -89,6 +111,8 @@ class CM
     @sources.each {|src| 
       if src.kind == :OBJ then
         object_files << src.path
+      elsif src.kind == :COMMAND
+        # do nothing
       else
         content << src.content(object_files) 
       end
@@ -114,23 +138,26 @@ class CM
       raise "Unsupported CM header format"
     end
     @sources = @lines[1..-1].collect {|l|
-      if l[0,1] == "/"
-        # absolute path
-        Source.new(l)
-      else
-        Source.new(File.join(@dir, l))
-      end
+      Source.new(l, @dir)
     }
   end
 end
 
 if __FILE__ == $0
   def usage
-    "USAGE: #$0 cm-file output-file"
+    "USAGE: #$0 cm-file [output-file]"
   end
 
-  cm_file = ARGV[0] || (raise usage)
-  output_file = ARGV[1] || (raise usage)
+  cm_file = ARGV.shift || (raise usage)
+
+  output_file = ARGV.shift 
+  if output_file.nil?
+    if File.exists? "x.sml"
+      raise usage
+    else
+      output_file = "x.sml"
+    end
+  end
 
   object_files = []
   c = Source.new(cm_file).content(object_files)
