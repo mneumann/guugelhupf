@@ -1,5 +1,0 @@
-Package GH is
-misc/all.cm
-gh-defs.sml
-tokenizer/tokenizer.cm
-hashing/make.cm
