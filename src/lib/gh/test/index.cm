@@ -13,4 +13,4 @@ Group is
 ../tokenizer/tokenizer.cm
 
 # 
-test.sml
+index.sml
