@@ -3,5 +3,6 @@ german.sml
 english.sml
 from-file.sml
 mmap/mmap-tokenizer.sml
+!cd mmap && make mmap-tokenizer.o
 mmap/mmap-tokenizer.o
 stream/stream-tokenizer.sml
