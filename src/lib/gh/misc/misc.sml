@@ -29,3 +29,7 @@ struct
    fun unimplemented msg = raise Fail("unimplemented: " ^ msg)
    fun bug msg = raise (Fail msg)
 end
+
+fun assert (cond: bool) = 
+   if cond = false then raise (Fail "assertion failed") else () 
+
