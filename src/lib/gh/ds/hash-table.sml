@@ -1,8 +1,9 @@
 (* 
- * Influenced by MLtons and John Reppys (SML/NJ) HashTable structure. 
- *
- * Copyright (c) 2002 by Michael Neumann
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de> 
+ * 
+ * Many ideas from MLtons and John Reppys (SML/NJ) HashTable structure. 
  *)
+
 structure HashTable =
 struct
 

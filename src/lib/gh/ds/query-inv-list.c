@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ */
+
 /* 
  * - load header and index into main memory
  * - mmap the data
