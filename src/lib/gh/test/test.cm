@@ -8,8 +8,9 @@ Group is
 ../gh-defs.sml
 
 # other
-../tokenizer/tokenizer.cm
 ../ds/ds.cm
+../filter/stopword-filter.sml
+../tokenizer/tokenizer.cm
 
 # 
 test.sml

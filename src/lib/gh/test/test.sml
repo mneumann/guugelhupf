@@ -1,34 +1,38 @@
+(* file -i -b filename *)
 open Hashing
 open DS
 open Tokenizer.CharTableTransform
 
+structure TS = StopwordFilterFn(structure TS = MmapTokenizer);
+
 val iv = FrequencyInvertedList.new {hash = Hashing.sdbmHash, size = 30000};
 val docid = ref 0w0; 
+val stopWordTable = TS.mkTableFromFile "../filter/stopWords.en"
 
 fun scanDocument iv file = 
    let 
       val _ = print (file ^ "\n")
-      val ts = MmapTokenizer.new2 (file, German)
+      val ms = MmapTokenizer.new2 (file, German)
+      val ts = TS.new {tokenStream = ms, table = stopWordTable}
       val id = Word.inc docid
       fun loop() = 
-         case MmapTokenizer.nextToken ts 
+         case TS.nextToken ts 
           of NONE => ()
            | SOME(tok) => (FrequencyInvertedList.addToken iv (id, tok); loop ()) 
    in
-      loop ()
+      loop ();
+      MmapTokenizer.free ms 
    end
 
 
-fun loop () = 
-   let 
-      val line = TextIO.inputLine TextIO.stdIn
+fun doIt () = 
+   let
+      val strm = TextIO.stdIn
    in
-      if line <> ""
-         then (scanDocument iv (String.substring (line, 0, String.size line - 1)); loop ())
-      else
-         () 
+      TextIO.appLines (fn line => scanDocument iv (String.chop line)) strm
    end
 
-val _ = loop ();  
+val _ = doIt ();  
 (*val _ = FrequencyInvertedList.output iv;*)
-val _ = FrequencyInvertedList.writeToFile iv "/tmp/index";
+(*val _ = print "\n--- write index file\n"; *)
+val _ = FrequencyInvertedList.writeToFile iv "/tmp/index"; 
