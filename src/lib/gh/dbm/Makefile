@@ -1,4 +1,9 @@
-all:
-	cc -c -O3 -fomit-frame-pointer -I/usr/local/lib/mlton/self/include dbm.c
+include ${GH_BASE}/mk/mk.include
+
+CFLAGS+=-I$(MLTON_LIB)/self/include
+OBJS=dbm.o
+
+all: $(OBJS)
+
 clean:
-	rm -f dbm.o
+	rm -f $(OBJS)

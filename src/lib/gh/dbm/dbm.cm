@@ -1,3 +1,4 @@
 Group is
 dbm.sml
+!make dbm.o
 dbm.o
