@@ -2,6 +2,7 @@ structure Pack =
 struct
    structure Prim = struct
       val pack_word = _ffi "Pack_word" : (word * string) -> unit;  
+      val unpack_word = _ffi "Unpack_word" : string -> word;
    end
 
   fun packWord (w: word) = 
@@ -12,4 +13,5 @@ struct
         str
      end
 
+  val unpackWord = Prim.unpack_word 
 end

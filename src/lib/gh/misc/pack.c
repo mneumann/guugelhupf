@@ -1,8 +1,14 @@
 #include "libmlton.h"
 
 void
-Pack_word(Word db, Pointer str) {
+Pack_word(Word val, Pointer str) {
   assert (GC_arrayNumElements(str) >= sizeof(Word));
 
-  *((Word*)str) = db;
+  *((Word*)str) = val;
+}
+
+Word
+Unpack_word(Pointer str) {
+  assert (GC_arrayNumElements(str) >= sizeof(Word));
+  return *((Word*)str);
 }
