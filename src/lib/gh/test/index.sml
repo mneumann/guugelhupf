@@ -21,14 +21,16 @@ let
                                charTable = mkCharTableFromFile charTableFile,  
                                outputFn = (fn str => TextIO.output (TextIO.stdErr, str))}
 
-   (* format of a line: file *)
-   (* TODO: allow attributes, like "uri", "file" etc. *)
+   (* format of a line: file [\t url] *)
    fun scanDocument line =
       let
-         val file = String.chop line
+         fun isTab c = (c = #"\t")
+         val file :: url = String.tokens isTab (String.chop line)
+         val url = if url = [] then file else List.hd url
+         
          val docid = Misc.Pack.unpackWord (DBM.lookup db "nextId")
          val _ = DBM.replace db ("nextId", Misc.Pack.packWord (docid + 0w1)) (* increase nextId *) 
-         val _ = DBM.insert db (Misc.Pack.packWord docid, file) (* store filename under docid in db *)
+         val _ = DBM.insert db (Misc.Pack.packWord docid, url) (* store filename under docid in db *)
       in
          DefaultIndex.indexDocument inx (file, docid) 
       end
