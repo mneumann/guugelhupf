@@ -1,4 +1,4 @@
-Group is
+Package CharTableTransform is
 german.sml
 english.sml
 mmap/mmap-tokenizer.sml
