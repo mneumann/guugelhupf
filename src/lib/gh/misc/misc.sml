@@ -20,6 +20,6 @@ struct
          f 0w1 
       end
 
-   fun dec (n:word ref) = (n := !n - 1; !n)
-   fun inc (n:word ref) = (n := !n + 1; !n)
+   fun dec (n:word ref) = (n := !n - 0w1; !n)
+   fun inc (n:word ref) = (n := !n + 0w1; !n)
 end
