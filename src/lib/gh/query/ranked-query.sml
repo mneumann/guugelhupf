@@ -1,3 +1,6 @@
+(*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ *)
 
 (* tokenizes and filters stopwords *)
 structure SimpleAnalyser = 
