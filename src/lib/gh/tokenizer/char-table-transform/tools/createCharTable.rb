@@ -65,11 +65,16 @@ class CharTable
     res
   end
 
-  def fromScript_SML(script)
+  def asString_Bin(*a)
+    @charTable.map {|c| c.chr}.join
+  end
+
+  def fromScript(script, lang=:SML)
+    lang ||= :SML
     @identifier = nil
     @indent, @inc_indent = nil, nil
     instance_eval script
-    asString_SML(@indent, @identifier, @inc_indent)
+    send("asString_#{lang}", @indent, @identifier, @inc_indent)
   end
 
   private
@@ -104,9 +109,12 @@ class CharTable
 end
 
 if __FILE__ == $0
+  # usage: $0 [format]
+  #
+  # where format is either SML or Bin
+  #
   # takes script on stdin and writes output to stdout
   
-  #
   # example of script:
   #
   #   identifier "hallo"
@@ -117,7 +125,8 @@ if __FILE__ == $0
   #
 
   ct = CharTable.new
-  STDOUT << ct.fromScript_SML(STDIN.read)
+  STDOUT << ct.fromScript(STDIN.read, ARGV[0])
+  STDOUT.flush
 
   #ct = CharTable.new
   #ct.addString(LOWERCASE)
