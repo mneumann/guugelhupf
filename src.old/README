@@ -1,0 +1,13 @@
+// don't use templates. they make it only unneccessaryly hard
+
+// index for only _one_ document
+abstract class DocumentIndex {
+}
+
+// stores the frequency of each word only.
+class TokenFrequencyDocumentIndex < DocumentIndex {
+}
+
+// stores the word positions of each occured word
+class TokenPositionDocumentIndex < DocumentIndex {
+}

@@ -131,7 +131,13 @@ if __FILE__ == $0
 
   def process(file)
     new_file = convert(file)
-    STDOUT.puts "#{new_file}\t#{file}" if new_file
+    begin
+       STDOUT.puts "#{new_file}\t#{file}" if new_file
+     rescue Exception => e
+       puts STDERR.e.inspect
+       sleep 1
+       retry
+     end
   end
 
   if ARGV.size > 1
