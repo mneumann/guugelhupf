@@ -1,0 +1,492 @@
+<sect1><title>Wahl einer geeigneten Hash-Funktion</title>
+
+  <sect2><title>Kriterien für die Auswahl</title>
+  <para>
+    <itemizedList>
+      <listitem>
+        <para>
+          Gleichmäßige Verteilung (geringe Anzahl von Kollisionen).
+
+          <itemizedList>
+            <listitem><para>Akzeptabler Worstcase, d.h. Maximum der Kollisionen
+                pro Zelle sollte möglichst gering sein.</para></listitem>
+            <listitem><para>Verteilung sollte auch dann noch erhalten bleiben 
+                wenn anstelle von Modulo zur Beschränkung auf einen 
+                Wertebereich, eine Bitweise UND-Verknüpfung verwendet wird 
+                (wichtig für Performance).</para></listitem>
+          </itemizedList>
+        </para>
+      </listitem>
+
+      <listitem>
+        <para>
+          Performance.
+          <itemizedList>
+            <listitem><para>
+                Keine Verwendung von Modulo-Operationen, da diese im Vergleich 
+                zu Bitweisen Operationen oder Additionen sehr langsam sind 
+                (gerade auf RISC Computern können diese die 100-fache Zeit
+                benötigen). 
+            </para></listitem>
+          </itemizedList>
+        </para>
+      </listitem>
+
+    </itemizedList>
+
+  </para>
+  </sect2>
+
+  <sect2><title>Vorstellung einiger Hash-Algorithmen</title>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>Knuth's Algorithmus</title>
+      <para>Die in Knuth's "The Art of Computer Programming" (Volume 3 "Sorting and Searching", Kapitel 6.4)
+      vorgestelle Hash-Funktion ist vielleicht eine der bekanntesten überhaupt. Dennoch ist ihre Verteilung
+      nur mittelmäßig. Darüber hinaus verwendet Knuth eine Modulo Operation (mit einer Primzahl) zur 
+      Beschränkung auf ein Intervall, welches ihre Performance mindert und wegen der verwendeten Primzahl
+      ein automatisches Vergrößern der Hashtabelle komplizierter macht.</para>
+
+    <!-- hash := ((hash shl 5) xor (hash shr 27)) xor c -->
+
+      <!--<example><title>Knuth's Hash-Funktion</title>-->
+        <programlisting><![CDATA[
+unsigned long 
+knuth_hash(unsigned char *str, int len) 
+{
+  unsigned long hash; 
+
+  for (hash=len; len--;) 
+  {
+    hash = ((hash<<5)^(hash>>27))^*str++;
+  }
+  return hash;     // % prime
+}
+]]>
+        </programlisting>
+        <!--</example>-->
+    </sect3>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>Kernigham und Ritchies Algorithmus</title>
+      <para>Kernigham und Ritchies Algorithmus ist eine einfache additive Hash-Funktion, die 
+        jedoch ungeeignet ist für seriöse Anwendungen.</para> 
+
+    <!-- hash := hash + c -->
+
+    <!--<example><title>K&amp;R's Hash-Funktion</title>-->
+        <programlisting><![CDATA[
+unsigned long
+k_r(unsigned char *str)
+{
+  unsigned long hash = 0;
+  int c;
+
+  while (c = *str++)
+    hash += c;
+                  
+  return hash;
+} 
+]]>
+        </programlisting>
+        <!--</example>-->
+    </sect3>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>D.J. Bernsteins Algorithmus</title>
+
+      <!-- hash := hash * 33 + c --> 
+
+      <!--<example><title>DJB's Hash-Funktion</title> -->
+        <programlisting><![CDATA[
+unsigned long
+djb2(unsigned char *str)
+{
+  unsigned long hash = 5381;
+  int c;
+
+  while (c = *str++)
+    hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+  return hash;
+}
+]]>
+        </programlisting>
+        <!--</example>-->
+    </sect3>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>SDBM Algorithmus</title>
+      <para>
+        Dieser Algorithmus wird in Sleepycat's Datenbank BDB (Berkeley DataBase) verwendet.</para>
+
+      <!-- hash := c + (hash shl 6) + (hash shl 16) - hash --> 
+
+      <!--<example><title>SDBM Hash-Funktion</title>-->
+        <programlisting><![CDATA[
+unsigned long
+sdbm(unsigned char *str)
+{
+  unsigned long hash = 0;
+  int c;
+
+  while (c = *str++)
+    hash = c + (hash << 6) + (hash << 16) - hash;
+
+  return hash;
+}
+]]>
+        </programlisting>
+        <!--</example>-->
+    </sect3>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>P.J. Weinberg Algorithmus</title>
+      <!--<example><title>P.J. Weinberg Hash-Funktion</title>-->
+        <programlisting><![CDATA[
+unsigned long 
+hashpjw(unsigned char* str)
+{
+  unsigned long hash=0;
+  unsigned long g;
+
+  for(;*str;++str) 
+  {
+    hash = (hash << 4)+ *str;
+    if(g=hash&0xf0000000) 
+    {
+      hash ^= g>>24;
+      hash ^= g;
+    }
+  }
+
+  return hash;
+}
+]]>
+        </programlisting>
+        <!--</example>-->
+    </sect3>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>OCaml's Algorithmus</title>
+      <para>Dieser Algorithmus wird in der aktuellen Version (3.04) von Objective Caml verwendet.</para>
+
+      <!-- hash := hash * 19 + c -->
+      <!--<example><title>OCaml's Hash-Funktion</title>-->
+        <programlisting><![CDATA[
+unsigned long
+ocaml_hash(unsigned char *str, int len) 
+{
+  unsigned long hash = 0;
+  int i;
+
+  for (i=0; i<len; i++) {
+    hash = hash*19 + str[i];
+  }
+
+  return hash;
+}
+]]>
+        </programlisting>
+        <!--</example>-->
+    </sect3>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>SML's Algorithmus</title>
+      <para>Dieser Algorithmus wird in der aktuellen Version (110.40) von SML/NJ (Standard ML/New Jersey) verwendet.</para>
+
+      <!-- hash := 33 * hash + 720 + c -->
+      <!--<example><title>SML's Hash-Funktion</title>-->
+        <programlisting><![CDATA[
+unsigned long
+sml_hash(unsigned char *str, int len) {
+  unsigned long hash = 0;
+  int i;
+
+  for (i=0; i<len; i++) 
+  {
+    hash = 33*hash + 720 + str[i];
+  }
+
+  return hash;
+}
+]]>
+        </programlisting>
+        <!--</example>-->
+    </sect3>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>STL's Algorithmus</title>
+      <para>Dieser Algorithmus wird/wurde (?) in der STL (Standard Template Library) von C++ verwendet.</para>
+
+      <!-- hash := 5 * hash + c -->
+      <!--<example><title>STL's Hash-Funktion</title>-->
+        <programlisting><![CDATA[
+unsigned long
+stl_hash(unsigned char *str, int len) 
+{
+  unsigned long hash = 0;
+  int i;
+
+  for (i=0; i<len; i++) 
+  {
+    hash = 5*hash + str[i];
+  }
+
+  return hash;
+}
+]]>
+        </programlisting>
+        <!--</example>-->
+    </sect3>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>Java's Algorithmus</title>
+      <para>Dieser Algorithmus wird (?) in Java's SDK verwendet.</para>
+
+      <!--<example><title>Java's Hash-Funktion</title>-->
+        <programlisting><![CDATA[
+unsigned long
+java_hash(unsigned char *str, int len) 
+{
+  unsigned long hash = 0;
+  int i;
+
+  for (i=0; i<len; i++) 
+  {
+    hash += ((unsigned long)s[i]*31)^(n-1-i);
+  }
+  return hash;
+}
+]]>
+        </programlisting>
+        <!--</example>-->
+    </sect3>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>Fowler/Noll/Vo Algorithmus</title>
+      <para>FNV ist ein relativ neuer und guter Hash-Algorithmus. Er wurde von Phong Vo, Glenn Fowler
+        entwickelt und von Landon Curt Noll verbessert.</para> 
+
+      <para>
+        <quote><literal>FNV hashes are designed to be fast while maintaining a low
+          collision rate. The FNV speed allows one to quickly hash lots
+          of data while maintaining a reasonable collision rate.</literal></quote>
+      </para>
+
+      <para>Mehr Information zum Algorithmus sowie eine Implementation in C ist im WWW unter folgender Adresse 
+        verfügbar: 
+        <ulink url="http://www.isthe.com/chongo/tech/comp/fnv/index.html">http://www.isthe.com/chongo/tech/comp/fnv/index.html</ulink>.
+      </para>
+    </sect3>
+
+    <!-- /////////////////////////////////////////////////////////////////////////////////// -->
+
+    <sect3><title>Bob Jenkins Algorithmus</title>
+      <para>Dies ist ein sehr schneller und guter Hash-Algorithmus. Er kommt ohne Multiplikation
+        oder Modulo/Divison aus. Der berechneter Hash-Wert kann mittels Bitweisem UND auf einen
+        kleineren Wertebereich eingeschränkt werden.</para> 
+
+      <para>Mehr Information zum Algorithmus sowie eine Implementation in C ist im WWW unter folgenden Adressen
+        verfügbar:
+
+        <ulink url="http://burtleburtle.net/bob/hash/evahash.html">http://burtleburtle.net/bob/hash/evahash.html</ulink> und 
+        <ulink url="http://burtleburtle.net/bob/hash/index.html#lookup">http://burtleburtle.net/bob/hash/index.html#lookup</ulink> (Dateien <filename>lookupa.h</filename> und <filename>lookupa.c</filename>)
+      </para>
+
+      <para>Im folgenden wird dieser Algorihmus <emphasis>NEW</emphasis> genannt.</para>
+
+    </sect3>
+
+  </sect2>
+
+  <sect2><title>Vergleich der Algorithmen</title>
+
+
+
+    <sect3><title>Qualität der Hash-Funktionen</title>
+      <para>Für den Vergleich wurde jede Hash-Funktion mit einem Testset von ungefähr 4,3 Millionen 
+        unterschiedlichen Wörtern "gefüttert" (keine binären Daten). 
+        Dabei wurden die Kollisionen bei einer n-Zellen großen Hash-Tabelle aufgezeichnet (wobei n eine
+        2er Potenz ist) und daraus die Standard-Abweichung, Anzahl der leeren Zellen sowie die maximale 
+        Kollisionsrate (einer Zelle) errechnet. Gerade Letzteres ist wichtig zur besseren Abschätzung eines 
+        <emphasis>realen</emphasis> Worstcases.
+      </para>
+
+      <warning>
+        <para>Es wurde nicht beachtet, daß durch die Anwendung von Modulo mit 
+          einer 2er Potenz zur Einschränkung des Wertebereiches eine Verschlechterung der Hash-Funktion 
+          entstehen kann (bei den Hash-Funktionen wo Modulo angewandt wurde). 
+          Oft wird eine Primzahl bei einer Modulo Operation verwendet.</para>
+      </warning>
+
+      <!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+      <sect4><title>Standard-Abweichung</title>
+
+        <para>
+          Deutlich lässt sich anhand der Diagramme erkennen, daß die besten Hash-Funktionen, der 
+          Fowler/Noll/Vo (FNV) sowie der Bob Jenkiens (NEW) Algorithmus sind. Für größere n jedoch
+          kommt der SDBM Algorithmus sehr nahe an beide heran.
+        </para>
+
+        <para>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="images/hashing/Variance0">
+            </imageobject>
+          </mediaobject>
+        </para>
+
+
+        <para>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="images/hashing/Variance1">
+            </imageobject>
+          </mediaobject>
+        </para>
+
+        <para>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="images/hashing/Variance2">
+            </imageobject>
+          </mediaobject>
+        </para>
+
+        <para>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="images/hashing/Variance3">
+            </imageobject>
+          </mediaobject>
+        </para>
+
+      </sect4>
+
+      <sect4><title>Anzahl leerer Zellen</title>
+
+        <para>
+          Auch bei diesem Test erkennt man deutlich, daß die Algorithmen FNV, NEW sowie SDBM 
+          am besten abschneiden.
+        </para>
+
+        <para>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="images/hashing/Empty0">
+            </imageobject>
+          </mediaobject>
+        </para>
+
+
+        <para>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="images/hashing/Empty1">
+            </imageobject>
+          </mediaobject>
+        </para>
+
+      </sect4>
+
+
+      <sect4><title>Maximale Kollisionsrate</title>
+
+        <para>
+          Auch in diesem Test schneiden SDBM, FNV und NEW sehr gut ab. 
+        </para>
+
+        <para>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="images/hashing/Max0">
+            </imageobject>
+          </mediaobject>
+        </para>
+
+
+        <para>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="images/hashing/Max1">
+            </imageobject>
+          </mediaobject>
+        </para>
+
+        <para>
+          <mediaobject>
+            <imageobject>
+              <imagedata fileref="images/hashing/Max2">
+            </imageobject>
+          </mediaobject>
+        </para>
+
+      </sect4>
+
+
+
+    </sect3>
+
+    <sect3><title>Performance der Hash-Funktionen</title>
+      <para>
+        Getestet wurde die Berechnung von Wörter der Länge 1 bis 24. 
+      </para>
+      <para>
+        Der SDBM Algorithmus ist sehr schnell, NEW liegt im Mittelfeld, FNV bildet das Schlusslicht!
+      </para>
+
+      <para>
+        <mediaobject>
+          <imageobject>
+            <imagedata fileref="images/hashing/Time0">
+          </imageobject>
+        </mediaobject>
+      </para>
+
+      <para>
+        <mediaobject>
+          <imageobject>
+            <imagedata fileref="images/hashing/Time1">
+          </imageobject>
+        </mediaobject>
+      </para>
+
+    </sect3>
+
+    <sect3><title>Fazit</title>
+      <para>
+        Besonders positiv aufgefallen sind folgende drei Algorithmen:
+        <itemizedList>
+          <listitem><para>FNV</para></listitem>
+          <listitem><para>NEW</para></listitem>
+          <listitem><para>SDBM</para></listitem>
+        </itemizedList>
+      </para>
+
+      <para>Wobei FNV von der Qualität der Hash-Werte am besten abschneidet (gerade für kleinere n), 
+        jedoch wegen der Performance (FNV ist der langsamste Algorithmus) ausscheidet.</para>
+
+      <para>Der NEW Algorithmus unterscheidet sich in der Qualität der Hash-Werte kaum vom 
+        FNV Algorithmus, jedoch ist er fast doppelt so schnell.</para>
+
+      <para>
+        Der SDBM Algorithmus ist mehr als 2.5 mal so schnell wie NEW und ist in der Qualität nicht
+        wesentlich schlechter als dieser. Besonders für große n sind alle drei Algorithmen in der
+        Qualität nahezu gleich.</para>
+    </sect3> 
+
+
+  </sect2>
+
+</sect1>
