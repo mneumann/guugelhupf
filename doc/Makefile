@@ -9,9 +9,10 @@ MAINTAINER=neumann@s-direktnet.de
 
 DOC?= design_impl
 
-FORMATS?= html-split
+FORMATS?= html-split 
+#-split
 
-HAS_INDEX=true
+HAS_INDEX=false
 
 INSTALL_COMPRESSED?= gz
 INSTALL_ONLY_COMPRESSED?=

@@ -73,6 +73,7 @@
 
   <sect1>
     <title>Evaluierung vorhandender Suchmaschinen und Frameworks</title>
+    <para>
 
     <sect2><title>Namazu</title></sect2>
     <sect2><title>udmsearch</title></sect2>
@@ -82,6 +83,7 @@
     <sect2><title>ht://Dig</title></sect2>
     <sect2><title>Glimpse</title></sect2>
 
+    </para>
     <para>
      <emphasis>TO BE WRITTEN</emphasis>
     </para>
