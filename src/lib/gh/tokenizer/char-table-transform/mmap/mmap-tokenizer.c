@@ -71,14 +71,14 @@ MmapTokenizer_nextToken(Pointer p, Pointer charTable, Pointer buf) {
   /* skip non-word characters (non-word characters are those for which 
    * in the characterTable a \0 is stored.)
    */
-  while (cur_ptr != end_ptr && charTable[(unsigned)*cur_ptr] == 0) {
+  while (cur_ptr != end_ptr && charTable[*((unsigned char*)cur_ptr)] == 0) {
     cur_ptr++; 
   } 
 
   /* cosume word characters until a non-word character occures */
   start_ptr = cur_ptr;
   end_ptr = (char*) MIN(cur_ptr + MmapTokenizer_maxWordLen, end_ptr);  
-  while (cur_ptr != end_ptr && (c=charTable[(unsigned)*cur_ptr]) != 0) {
+  while (cur_ptr != end_ptr && (c=charTable[*((unsigned char*)cur_ptr)]) != 0) {
     *buf++ = c;  /* store character in SML buffer */
     cur_ptr++;
   }
