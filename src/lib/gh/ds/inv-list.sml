@@ -79,21 +79,21 @@ struct
       val version = 0wx00010000      (* major = upper word (2-byte), minor = lower *) 
 
       fun getPos fd = lseek (fd, 0, SEEK_CUR)
-      fun setPos fd (pos: word) = lseek (fd, pos, SEEK_SET) 
+      fun setPos fd (pos: word) = lseek (fd, Word.toInt pos, SEEK_SET) 
 
       fun readWordAtPos fd pos = (setPos fd pos; readWord fd)
    in
 
    (* Important: Use the same hash here as used for creating the index *) 
-   fun lookupTermsInFile ({file, hash, terms})  = 
+   fun lookupTermsInFile {file, hash, terms: string list}  = 
      let
         val fd = openf (file, O_RDONLY, 0w0)
-        val rKennung = readString fd (String.length kennung)
+        val rKennung = readString fd (Word.fromInt (String.size kennung))
         val rVersion = readWord fd 
         val flags = readWord fd
         val indexSize = readWord fd
 
-        val mask = indexSize - 1 
+        val mask = indexSize - 0w1 
 
         val indexOffs = Word.fromInt headerSize
         val dataOffs = Word.fromInt headerSize + (indexSize * 0w4)
@@ -104,35 +104,34 @@ struct
               val ix = Word.andb (hv, mask)
               val bucket = readWordAtPos fd (indexOffs + ix * 0w4) 
 
-             (*
-              * numDocs: word32 
-              * termSize: word8
-              * termText: termSize bytes
-              * 
-              * numDocs times {
-              *    docId: word32
-              *    frequency: word32
-              * }
-              *) 
-              fun readToken () = 
-                 let
-                    val h = if bWriteHash then readWord fd else 0w0 
-                    val numDocs = readWord fd
-                    val termSize = readWord8 fd
+              fun readDocs 0w0 = []
+                | readDocs n = 
+                 let 
+                    val docId = readWord fd
+                    val freq  = readWord fd 
                  in
-                    if bWriteHash then
-                      if h = hv then
-                     
-  
-                       else skip 
-                         
-                     
+                    (docId, freq) :: readDocs (n - 0w1)
+                 end
+
+              fun readToken 0w0 = [] 
+                | readToken n =
+                 let
+                    val numDocs = readWord fd
+                    val termSize = Word.fromInt (Word8.toInt (readWord8 fd))
+                    val termText = readString fd termSize 
+                in
+                    if termText = term  (* found *)
+                       then readDocs numDocs 
+                    else (
+                       lseek (fd, 8 * Word.toInt numDocs, SEEK_CUR);
+                       readToken (n - 0w1) )
                  end     
  
               fun readBucket () = 
                  let 
-                    val numTokens = readWordAtPos (dataOffs + bucket) 
+                    val numTokens = readWordAtPos fd (dataOffs + bucket) 
                  in
+                    readToken numTokens
                  end 
 
            in
@@ -140,17 +139,16 @@ struct
                  then []
               else 
                  readBucket () 
-           end 
+           end (* lookupTerm *)  
 
      in
         (* check header *)   
         assert (rKennung = kennung);
         assert (rVersion = version);
-        assert (getPos(fd) = headerSize) 
+        assert (getPos(fd) = headerSize);
+
+        List.map (fn term => (term, lookupTerm term)) terms
      end
-
-
-   
 
    fun writeToFile (T{hashTable}) (filename: string) = 
       let
