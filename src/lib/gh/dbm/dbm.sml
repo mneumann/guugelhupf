@@ -10,13 +10,18 @@ structure DBM :> sig
 
    val new : string -> dbm
    val new2 : (string * word * word) -> dbm
+   val openReadOnly : string -> dbm
    val close : dbm -> unit
    val insertIfNew : dbm -> (string * string) -> unit
    val insertOrReplace : dbm -> (string * string) -> unit
+   val insert : dbm -> (string * string) -> unit
+   val replace : dbm -> (string * string) -> unit
    val delete : dbm -> string -> unit
    val deleteIfExist : dbm -> string -> unit
    val find : dbm -> string -> string option
    val lookup : dbm -> string -> string
+   val inDomain : dbm -> string -> bool
+   val hasKey : dbm -> string -> bool
 
 end = struct
 
@@ -65,6 +70,8 @@ end = struct
 
    fun new (base: string) = new2 (base, Word.orb (Prim.O_RDWR, Prim.O_CREAT), 0w420 (* 0644 *)) 
 
+   fun openReadOnly (base: string) = new2 (base, Prim.O_RDONLY, 0w420)
+
    val close = Prim.dbm_close
 
    fun genInsert (db, key, data, mode) = 
@@ -82,6 +89,10 @@ end = struct
 
    fun insertOrReplace (db: dbm) (key: string, data: string) = 
       genInsert (db, key, data, Prim.DBM_REPLACE)
+
+   val insert = insertIfNew
+
+      
 
    fun delete (db: dbm) (key: string) =  
       let
@@ -117,10 +128,24 @@ end = struct
            end
       end
 
-
    fun lookup (db: dbm) (key: string) = 
       case find db key 
        of NONE => raise Error (0, "dbm: Could not fetch entry")
         | SOME (d) => d
+
+   fun inDomain (db: dbm) (key: string) = 
+      let
+         val c = Misc.CStruct.new 4 (* buffer for one word *)
+         val res = Prim.dbm_fetch (db, key, c)
+      in
+         if res = ~1 then false
+         else true
+     end
+
+   val hasKey = inDomain (* synonyme *)
+
+   fun replace (db: dbm) (key: string, data: string) = 
+      if not (inDomain db key) then raise Error (0, "dbm: Failed to replace entry. Entry do not exist!")
+      else insertOrReplace db (key, data)
 
 end
