@@ -13,7 +13,7 @@ open GH.Tokenizer.CharTableTransform;
 
 val args = CommandLine.arguments ();
 val file = hd args;
-val s = MmapTokenizer.new2 (file, German);
+val s = MmapTokenizer.new (file, German);
 
 fun loop() = 
   case MmapTokenizer.nextToken s
