@@ -3,25 +3,54 @@ open Hashing
 open DS
 open Tokenizer.CharTableTransform
 
-structure TS = StopwordFilterFn(structure TS = MmapTokenizer);
+structure T = MmapTokenizer
+structure TS = StopwordFilterFn(structure TS = T);
 
+val charTable = mkCharTableFromFile "../tokenizer/char-table-transform/german.ct"
 val iv = FrequencyInvertedList.new {hash = Hashing.sdbmHash, size = 30000};
 val docid = ref 0w0; 
 val stopWordTable = TS.mkTableFromFile "../filter/stopWords.en"
 
 fun scanDocument iv file = 
    let 
-      val _ = print (file ^ "\n")
-      val ms = MmapTokenizer.new2 (file, German)
+      val timer = Timer.startCPUTimer () (* start timer *)
+
+      val _ = print ("= processing file " ^ file ^ "\n")
+
+      val ms = T.new (file, charTable)
       val ts = TS.new {tokenStream = ms, table = stopWordTable}
       val id = Word.inc docid
       fun loop() = 
          case TS.nextToken ts 
           of NONE => ()
            | SOME(tok) => (FrequencyInvertedList.addToken iv (id, tok); loop ()) 
+
+      fun reportStats () = 
+         let
+            val {usr, sys, gc} = Timer.checkCPUTimer timer (* stop timer *)
+            val total = Time.+ (Time.+ (usr, sys), gc)
+
+            val (tokenIn, tokenOut) = TS.inOutStats ts 
+            val tokenFiltered = tokenIn - tokenOut
+
+            val wordToDecString = Int.toString o Word.toInt
+            val timeToString = LargeInt.toString o Time.toMicroseconds (*Real.toString o Time.toReal  *)
+         in
+            print ("! token in/out/filtered: " ^ 
+                   wordToDecString tokenIn ^ "/" ^
+                   wordToDecString tokenOut ^ "/" ^
+                   wordToDecString tokenFiltered  ^ "\n");
+            print ("! time (in us) usr/sys/gc/total: " ^
+                   timeToString usr ^ "/" ^ 
+                   timeToString sys ^ "/" ^ 
+                   timeToString gc ^ "/" ^ 
+                   timeToString total ^ "\n");
+            print "\n"
+         end
    in
       loop ();
-      MmapTokenizer.free ms 
+      reportStats ();
+      T.free ms 
    end
 
 
@@ -34,5 +63,4 @@ fun doIt () =
 
 val _ = doIt ();  
 (*val _ = FrequencyInvertedList.output iv;*)
-(*val _ = print "\n--- write index file\n"; *)
 val _ = FrequencyInvertedList.writeToFile iv "/tmp/index"; 
