@@ -1,3 +1,5 @@
 Package GH is
-misc/make.cm
-tokenizer/make.cm
+misc/all.cm
+gh-defs.sml
+tokenizer/tokenizer.cm
+hashing/make.cm
