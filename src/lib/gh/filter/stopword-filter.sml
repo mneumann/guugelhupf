@@ -1,3 +1,7 @@
+(*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ *)
+
 functor StopwordFilterFn (structure TS: TOKEN_STREAM) :> 
 sig
    include TOKEN_STREAM
