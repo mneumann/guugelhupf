@@ -6,7 +6,7 @@ sdbm_hash(Pointer str) {
   int length = GC_arrayNumElements(str);
   
   while (length--) 
-    hash = (*((char*)str)++) + (hash << 6) + (hash << 16) - hash;
+    hash = (*((unsigned char*)str)++) + (hash << 6) + (hash << 16) - hash;
 
   return hash;
 }
