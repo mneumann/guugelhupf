@@ -68,32 +68,45 @@ struct
         List.app outp l
       end
 
-
-
-   (* 
-    File-format:
-   *)
    fun writeToFile (T{hashTable}) (filename: string) = 
       let
          open Posix.FileSys
+         open Posix.IO
          open IO
 
          val buckets = HashTable.getBuckets hashTable
+         val numBuckets = HashTable.numBuckets hashTable
 
-         val emptyBucket = 0wxFFFFFFFF
+         val emptyBucket = 0w0
+         val headerSize = 28
 
-         val fdi = creat (filename ^ ".inx", S.irwxu) (* index file *)
-         val fdc = creat (filename ^ ".cnt", S.irwxu) (* content file *)
+         val bWriteHash = false (* todo: make an option *)
 
-         fun getPos fd = 
+         val fdi = creat (filename, S.irwxu) (* writes the header and the index (hash) *)
+         val fdc = openf (filename, O_WRONLY, 0w0)  (* writes the content of the inverted list *)
+         val _ = lseek (fdc, headerSize + (numBuckets*4), SEEK_SET)  
+
+         fun getPos fd = lseek (fd, 0, SEEK_CUR)
+
+         fun writeHeader () = 
             let
-               open Posix.IO
+               val HASH = 0wxb1
+               val kennung = "FREQ_INV_LIST   "        (* 16 bytes *)
+               val version = 0wx0100                   (* 4 bytes *)
+               val flags = if bWriteHash then HASH else 0w0 (* 4 bytes *)
+               val indexSize = Word.fromInt numBuckets (* 4 bytes *) 
             in
-               lseek (fd, 0, SEEK_CUR)
+               writeString fdi kennung;
+               writeWord fdi version;
+               writeWord fdi flags;
+               writeWord fdi indexSize;
+               
+               assert (getPos(fdi) = headerSize) 
             end
+ 
 
          (*
-          * hash: word32   (* NOTE: can be omited to reduce space consumption *)
+          * (optional) hash: word32   (* write if bWriteHash = true *) 
           * numDocs: word32 
           * termSize: word8
           * termText: termSize bytes
@@ -112,11 +125,10 @@ struct
                     val frequency = !(#frequency pst)
                  in
                     writeWord fdc docId;
-                    writeWord fdc frequency;
-                    ()
+                    writeWord fdc frequency
                  end
             in
-               writeWord fdc hash;
+               if bWriteHash then writeWord fdc hash else ();
                writeWord fdc numDocs;
                writeWord8 fdc termSize;
                writeString fdc termText;
@@ -137,10 +149,8 @@ struct
                val numTokens = Word.fromInt (List.length lst)
                val offs = Word.fromInt (getPos fdc)
             in
-               if numTokens = 0w0 then (
-                  writeWord fdi emptyBucket;
-                  ()
-               )
+               if numTokens = 0w0 then 
+                  writeWord fdi emptyBucket
                else ( 
                   writeWord fdi offs;
                   writeWord fdc numTokens;
@@ -149,6 +159,7 @@ struct
             end
 
       in
+         writeHeader ();
          Array.app writeBucket buckets 
       end
          
