@@ -54,7 +54,7 @@ struct
 
    (* from MLton basic/string0.sml *)
    fun dropPrefix (s, n) = 
-      substring (s, n, (size n) - n)
+      substring (s, n, (size s) - n)
 
 end
 
