@@ -61,7 +61,7 @@ end = struct
 
    fun new2 (base: string, flags: word, mode: word) = 
       let 
-         val db = Prim.dbm_open (base, flags, mode)
+         val db = Prim.dbm_open (base ^ "\000", flags, mode)
       in
         if db = 0w0 then failure ()
         else db 

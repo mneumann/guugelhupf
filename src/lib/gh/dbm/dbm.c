@@ -14,21 +14,10 @@ const Word DBM_O_NOFOLLOW = O_NOFOLLOW;
 const Word DBM_INSERT_C = DBM_INSERT;
 const Word DBM_REPLACE_C = DBM_REPLACE;
 
+/* NOTE: base must be null-terminated */
 Word
 DBM_open(Pointer base, Word flags, Word mode) {
-  char *str;
-  int str_sz;
-
-  /* create null terminated string from base */
-  str_sz = GC_arrayNumElements(base);
-  str = (char*) malloc(str_sz+1);
-  if (NULL == str) {
-    die("DBM_open: Cannot alloc memory!");
-  }
-  memcpy(str, base, str_sz);
-  str[str_sz] = '\0';
-
-  return (Word) dbm_open(str, flags, mode);
+  return (Word) dbm_open(base, flags, mode);
 }
 
 void
