@@ -17,5 +17,9 @@ signature TOKEN_STREAM =
   sig
      type t
      val nextToken : t -> token option 
+
+     val toList : t -> token list
+     val app : (token -> unit) -> t -> unit
+     val map : (token -> 'a) -> t -> 'a list  
   end
 
