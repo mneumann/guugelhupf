@@ -1,11 +1,25 @@
-fun test (fileName: string) = 
+open Posix.FileSys
+open Posix.IO
+
+val tWord = 0wx12345678;
+
+fun testWrite (filename: string) = 
    let
-      open Posix.FileSys
-      val fd = creat (fileName, S.irwxu)
+      val fd = creat (filename, S.irwxu)
    in
-      (*IO.writeString fd "hallo leute\n";*)
-      IO.writeWord fd 0wx12345678;
-      Posix.IO.close fd
+      IO.writeWord fd tWord;
+      close fd
    end
 
-val _ = test "hallo.txt";
+fun testRead (filename: string) = 
+  let
+     val fd = openf (filename, O_RDONLY, 0w0)
+  in
+    case IO.readWord fd
+     of tWord => print "OK\n"
+      | _     => print "FAILED\n"
+  end
+
+val file = "hallo.txt";
+val _ = testWrite file;
+val _ = testRead file;
