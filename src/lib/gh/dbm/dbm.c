@@ -1,7 +1,9 @@
 /*
  * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
  *
- * $LastChangedRevision$
+ * $URL$
+ * $Author$
+ * $Rev$
  */
 
 #include <fcntl.h>
