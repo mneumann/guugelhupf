@@ -1,4 +1,6 @@
-(** package DE.FantasyCoders.GH.IO; *)
+(*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ *)
 
 structure IO = 
 struct
