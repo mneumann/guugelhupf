@@ -4,7 +4,6 @@ structure IO =
 struct
    structure Prim = struct
       type fd = word 
-      val errno = _ffi "errno" : word;
       val write_char = _ffi "IO_write_char" : (fd * char) -> int;
       val write_word8 = _ffi "IO_write_word8" : (fd * Word8.word) -> int;
       val write_word = _ffi "IO_write_word" : (fd * Word.word) -> int; 
@@ -25,7 +24,7 @@ struct
 
    fun failure () =
       let 
-         val err = Posix.Error.fromWord Prim.errno
+         val err = Posix.Error.fromWord (Word.fromInt (MLton.errno ()))
       in
          raise OS.SysErr ("", SOME (err))
       end

@@ -23,7 +23,6 @@ end = struct
    structure Prim = struct
       type dbm = word
 
-      val errno = _ffi "errno" : word;
       val dbm_open = _ffi "DBM_open" : (string * word * word) -> dbm;
       val dbm_close = _ffi "DBM_close" : dbm -> unit;
       val dbm_store = _ffi "DBM_store" : (dbm * string * string * word) -> int;
@@ -60,7 +59,7 @@ end = struct
       let 
          val db = Prim.dbm_open (base ^ "\000", flags, mode)
       in
-        if db = 0w0 then failure (Prim.errno)
+        if db = 0w0 then failure (Word.fromInt (MLton.errno()))
         else db 
       end 
 
