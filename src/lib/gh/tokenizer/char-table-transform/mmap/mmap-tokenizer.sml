@@ -6,7 +6,7 @@ structure MmapTokenizer :>
     val new : (Posix.IO.file_desc * int) -> t
     val new2 : string -> t
     val free : t -> unit
-    val nextToken : t -> string option 
+    val nextToken : t -> token option 
   end = 
   struct 
 
@@ -24,7 +24,8 @@ structure MmapTokenizer :>
       end (* Prim *)
 
     datatype t = T of {prim: Prim.t, fd : Posix.IO.file_desc,
-                       charTable: string, buf: CharArray.array}
+                       charTable: string, buf: CharArray.array,
+                       wordPos: word ref}
 
     fun new (fd : Posix.IO.file_desc, len : int, ct : string) : t = let
       val s = Misc.CStruct.new Prim.structSize
@@ -35,7 +36,7 @@ structure MmapTokenizer :>
       else (); 
 
       if Prim.init (s, Posix.FileSys.fdToWord fd, len) then
-        T {prim = s, fd = fd, charTable = ct, buf = b}
+        T {prim = s, fd = fd, charTable = ct, buf = b, wordPos = ref 0w0}
       else
         raise Error("Failed to memory map file")
     end
@@ -50,13 +51,15 @@ structure MmapTokenizer :>
 
     fun free (T {prim = s, ...}) = Prim.free s
 
-    fun nextToken (T {prim = s, charTable = ct, buf = b, ...}) = let
+    fun nextToken (T {prim = s, charTable = ct, buf = b, wordPos, ...}) = let
       val sz = Prim.nextToken (s, ct, b) 
     in 
       if sz = 0 then
         NONE
       else
-        SOME (CharArray.extract (b, 0, SOME (sz))) 
+        SOME (Token {term = CharArray.extract (b, 0, SOME (sz)),
+                     position = Word.inc wordPos,
+                     kind = NONE }) 
     end
 
   end;
