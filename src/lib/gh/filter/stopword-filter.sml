@@ -69,4 +69,7 @@ end = struct
 
    fun mkTableFromFile (filename: string) = mkTableFromStream (TextIO.openIn filename)
 
+   val map = TokenStream0.map nextToken
+   val app = TokenStream0.app nextToken
+   val toList = TokenStream0.toList nextToken
 end
