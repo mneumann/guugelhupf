@@ -3,31 +3,6 @@
  *
  * Copyright (c) 2002 by Michael Neumann
  *)
-
-structure Array = 
-struct
-   open Array
-   val new = array 
-end
-structure Int =
-struct
-   open Int
-   fun dec (n:int ref) = n := !n - 1
-   fun inc (n:int ref) = n := !n + 1
-end
-
-structure Word =
-struct
-   open Word
-   fun roundUpToPowerOfTwo (n:word) = 
-      let 
-         fun f i = if (i >= n) then i else f(Word.* (i, 0w2))
-      in
-         f 0w1 
-      end
-end
-
-
 structure HashTable =
 struct
 
@@ -62,6 +37,8 @@ fun new {equals, hash, notFound, size} =
 fun size (HT {numItems, ...}) = !numItems
 
 fun numBuckets (HT {buckets, ...}) = Array.length (!buckets)
+
+fun getBuckets (HT {buckets, ...}) = (!buckets)
 
 fun index (w: word, mask: word): int =
    Word.toInt (Word.andb (w, mask))
@@ -102,6 +79,25 @@ fun insert (HT{buckets, equals, hash, mask, numItems, ...}) (key, item) =
    in
      Array.update (!buckets, ix, ins bucket)
    end
+
+(* If item does not exist, insert it into table. Otherwise just return the value. *)
+fun lookupOrInsert (HT{buckets, equals, hash, mask, numItems, ...}) (key, item) =
+   let
+      val hv = hash key
+      val ix = index (hv, !mask)
+      val bucket = Array.sub (!buckets, ix)
+      fun upd b = Array.update (!buckets, ix, b)
+
+      fun loi [] = (Int.inc numItems; upd [(hv, key, item)]; item) (* key not found -> insert *) 
+        | loi ((h, k, i) :: xs) = 
+             if hv = h andalso equals (key, k) (* key found -> return value *)
+                then i
+             else
+                loi xs
+   in
+     loi bucket
+   end
+
 
 (* look for an item, return NONE if the item doesn't exist *)
 fun find (HT{buckets, equals, hash, mask, ...}) key = 
@@ -148,7 +144,22 @@ fun remove (HT{buckets, equals, hash, mask, notFound, ...}) key =
      Array.update (!buckets, ix, rmv bucket)
    end
 
+fun listItems (HT{buckets, ...}) = 
+   let
+     fun extractItems (x, xs) = (List.map (fn (_,_,v) => v) x) @ xs
+   in
+      Array.foldr extractItems [] (!buckets)
+   end
+
+fun listItemsi (HT{buckets, ...}) = 
+   let
+     fun extractItems (x, xs) = (List.map (fn (_,k,v) => (k,v)) x) @ xs
+   in
+      Array.foldr extractItems [] (!buckets)
+   end
+
 end
+(* inDomain *)
 
 (* 
 fun hashString (s:string) = Word.fromInt(String.size s);
