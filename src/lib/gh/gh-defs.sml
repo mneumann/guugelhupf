@@ -12,3 +12,10 @@ datatype token = Token of {
    position : word,         (* Position of token in the document. *)
    kind     : string option (* Kind of token (e.g. "title" or "emph"). *)
 } 
+
+signature TOKEN_STREAM = 
+  sig
+     type t
+     val nextToken : t -> token option 
+  end
+
