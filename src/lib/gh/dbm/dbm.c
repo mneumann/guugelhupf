@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ */
+
 #include <fcntl.h>
 #include <ndbm.h>
 #include <stdlib.h>

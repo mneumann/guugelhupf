@@ -1,3 +1,7 @@
+(*
+ * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ *)
+
 structure DBM :> sig
 
    type dbm
@@ -42,28 +46,19 @@ end = struct
    exception Error of (OS.syserror * string)
    type dbm = Prim.dbm
 
-   fun failure () = 
+   fun failure errno = 
       let 
-         val syserr = Posix.Error.fromWord Prim.errno
+         val syserr = Posix.Error.fromWord errno
          val errmsg = Posix.Error.errorMsg syserr
       in 
          raise Error (syserr, errmsg)
       end
-
-   fun failure2 db = 
-      let 
-         val syserr = Posix.Error.fromWord (Prim.dbm_error db)
-         val errmsg = Posix.Error.errorMsg syserr
-      in 
-         raise Error (syserr, errmsg)
-      end
-
 
    fun new2 (base: string, flags: word, mode: word) = 
       let 
          val db = Prim.dbm_open (base ^ "\000", flags, mode)
       in
-        if db = 0w0 then failure ()
+        if db = 0w0 then failure (Prim.errno)
         else db 
       end 
 
@@ -76,7 +71,7 @@ end = struct
          val res = Prim.dbm_store (db, key, data, mode)
       in
          case res 
-          of ~1 => failure2 db 
+          of ~1 => failure (Prim.dbm_error db)
            | 1  => raise Error (0, "dbm: Could not insert entry")
            | _  => ()
       end
@@ -92,7 +87,7 @@ end = struct
          val res = Prim.dbm_delete (db, key)
       in
          case res 
-          of ~1 => failure2 db 
+          of ~1 => failure (Prim.dbm_error db)
            | 1  => raise Error (0, "dbm: Could not delete entry")
            | _  => ()
       end
@@ -102,7 +97,7 @@ end = struct
          val res = Prim.dbm_delete (db, key)
       in
          case res 
-          of ~1 => failure2 db 
+          of ~1 => failure (Prim.dbm_error db)
            | _  => ()
       end
 
