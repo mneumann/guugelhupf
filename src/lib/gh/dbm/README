@@ -1,0 +1,2 @@
+Interface to DBM hash database for MLton.
+For more information see "man 3 dbm".
