@@ -23,3 +23,9 @@ struct
    fun dec (n:word ref) = (n := !n - 0w1; !n)
    fun inc (n:word ref) = (n := !n + 0w1; !n)
 end
+
+structure Error = 
+struct
+   fun unimplemented msg = raise Fail("unimplemented: " ^ msg)
+   fun bug msg = raise (Fail msg)
+end
