@@ -33,12 +33,29 @@ end
 fun assert (cond: bool) = 
    if cond = false then raise (Fail "assertion failed") else () 
 
+structure Char = 
+struct
+   open Char
+   (* copied from MLton basic/char0.sml *)
+   fun digitToInt (c: char): int option =
+      if isDigit c
+         then SOME (ord c - ord #"0")
+      else NONE
+end
+
 structure String = 
 struct
    open String
    fun chop str = substring (str, 0, size str - 1)
    val downcase = String.map Char.toLower
    val upcase = String.map Char.toUpper
+
+   val length = size
+
+   (* from MLton basic/string0.sml *)
+   fun dropPrefix (s, n) = 
+      substring (s, n, (size n) - n)
+
 end
 
 structure TextIO =
