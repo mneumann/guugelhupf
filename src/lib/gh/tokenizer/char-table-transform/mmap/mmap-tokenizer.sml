@@ -2,11 +2,10 @@
 
 structure MmapTokenizer :>
   sig 
-    type t 
+    include TOKEN_STREAM 
     val new : (Posix.IO.file_desc * int) -> t
     val new2 : string -> t
     val free : t -> unit
-    val nextToken : t -> token option 
   end = 
   struct 
 
@@ -49,7 +48,7 @@ structure MmapTokenizer :>
       new (fd, sz, ct)
     end
 
-    fun free (T {prim = s, ...}) = Prim.free s
+    fun free (T {prim = s, fd, ...}) = (Prim.free s; Posix.IO.close fd)
 
     fun nextToken (T {prim = s, charTable = ct, buf = b, wordPos, ...}) = let
       val sz = Prim.nextToken (s, ct, b) 
