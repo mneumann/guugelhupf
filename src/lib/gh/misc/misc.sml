@@ -33,3 +33,32 @@ end
 fun assert (cond: bool) = 
    if cond = false then raise (Fail "assertion failed") else () 
 
+structure String = 
+struct
+   open String
+   fun chop str = substring (str, 0, size str - 1)
+   val downcase = String.map Char.toLower
+   val upcase = String.map Char.toUpper
+end
+
+structure TextIO =
+struct
+   open TextIO
+
+   fun appLines (f: string -> unit) (strm: instream) : unit = 
+      case TextIO.inputLine strm
+       of "" => ()
+        | line => (f line; appLines f strm)
+
+   fun readLines (strm: instream) : string list = 
+      let 
+         fun loop lst = 
+            case TextIO.inputLine strm
+             of "" => lst 
+              | line => loop (lst @ [line])
+      in
+         loop []
+      end
+
+end
+
