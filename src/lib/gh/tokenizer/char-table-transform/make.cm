@@ -1,6 +1,7 @@
 Package CharTableTransform is
 german.sml
 english.sml
+from-file.sml
 mmap/mmap-tokenizer.sml
 mmap/mmap-tokenizer.o
 stream/stream-tokenizer.sml
