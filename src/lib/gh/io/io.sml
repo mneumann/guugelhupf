@@ -47,7 +47,7 @@ struct
    fun readWord (fd: fd) = Prim.read_word (fdToWord fd)
    fun readInt (fd: fd) = Prim.read_int (fdToWord fd)
 
-   fun readString (fd: fd, n: word) = 
+   fun readString (fd: fd) (n: word) = 
       let
          val buf = CharArray.array (Word.toInt n, #"\000")
       in
@@ -55,7 +55,7 @@ struct
          CharArray.extract (buf, 0, NONE)
       end
 
-   fun readWordArray (fd: fd, n: word) = 
+   fun readWordArray (fd: fd) (n: word) = 
       let
          val buf = Array.array (Word.toInt n, 0w0)
       in
