@@ -22,20 +22,6 @@
 	  </address>
 	</affiliation>
       </author>
-
-      <!-- fake author -->
-      <author>
-        <firstname>Werner</firstname>
-	
-	<surname>Maier</surname>
-
-	<affiliation>
-	  <address>
-	    <email>werner@maier-web.net</email>
-	  </address>
-	</affiliation>
-      </author>
-
     </authorgroup>
 
     <copyright>
