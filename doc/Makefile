@@ -5,7 +5,7 @@
 # Build the FreeBSD Handbook in its German translation.
 #
 
-MAINTAINER=neumann@s-direktnet.de
+MAINTAINER=mneumann@ntecs.de
 
 DOC?= design_impl
 

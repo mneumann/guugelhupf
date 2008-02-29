@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ * Copyright (c) 2002 Michael Neumann <mneumann@ntecs.de>
  *)
 
 functor StopwordFilterFn (structure TS: TOKEN_STREAM) :> 

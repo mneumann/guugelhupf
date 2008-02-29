@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2002 Michael Neumann <neumann@s-direktnet.de>
+ * Copyright (c) 2002 Michael Neumann <mneumann@ntecs.de>
  *)
 
 datatype lexresult = EOF | TERM of string | RANKING of int | RANKING_POS | RANKING_NEG

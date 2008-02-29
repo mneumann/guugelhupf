@@ -3,7 +3,7 @@
 # A simple compilation manager for MLton, which supports Groups, 
 # Packages, Objectfiles and arbitrary commands.
 #
-# Copyright (c) 2001, 2002 Michael Neumann <neumann@s-direktnet.de>
+# Copyright (c) 2001, 2002 Michael Neumann <mneumann@ntecs.de>
 # 
 # All rights reserved.
 #
