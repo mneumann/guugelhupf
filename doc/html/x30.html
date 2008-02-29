@@ -1,0 +1,1141 @@
+<HTML
+><HEAD
+><TITLE
+>Architektur von Guugelhupf</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+HREF="index.html"><LINK
+REL="NEXT"
+TITLE="Limitations"
+HREF="x298.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="docbook.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+></TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="index.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x298.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN30"
+></A
+>2. Architektur von Guugelhupf</H1
+><P
+>  Guugelhupf besteht, grob gesehen, aus zwei Teilen: 
+  <P
+></P
+><UL
+><LI
+><P
+>Dem Indizierer</P
+></LI
+><LI
+><P
+>und dem Abfrage/Query Programm.</P
+></LI
+></UL
+>&#13;</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN38"
+></A
+>2.1. Der Indizierer</H2
+><P
+>  Aus einer beliebigen Anzahl von Dateien erstellt der Indizierer einen schnell zu
+  durchsuchenden Index. </P
+><P
+>  Der Indizierer unterteilt sich selbst wieder in die folgenden Teile:
+  <P
+></P
+><UL
+><LI
+><P
+>Dem Analyser, bestehend aus:
+      <P
+></P
+><UL
+><LI
+><P
+>Einem Tokenizer, und</P
+></LI
+><LI
+><P
+>beliebig viele Filter (z.B. LowercaseFilter, StopwordFilter etc.).</P
+></LI
+></UL
+>
+    </P
+></LI
+><LI
+><P
+>Die Datenstruktur zum Aufbau und Speicherung des Index.</P
+></LI
+></UL
+>
+
+  </P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN52"
+></A
+>2.1.1. Tokenizer</H3
+><P
+>  In der vorliegenden Version von Guugelhupf ist nur eine Art von Tokenizer implementiert, den wir
+  <SPAN
+CLASS="emphasis"
+><I
+CLASS="EMPHASIS"
+>CharTableTransform-Tokenizer</I
+></SPAN
+> nennen, da er aus einer Lookup-Tabelle besteht, die
+  jedes ASCII Zeichen auf ein anderes ASCII Zeichen abbildet/transformiert, mit der Besonderheit, 
+  daß der ASCII-Wert 0 eine spezielle Bedeutung hat, und zwar ist in diesem Fall das Zeichen ein 
+  <SPAN
+CLASS="emphasis"
+><I
+CLASS="EMPHASIS"
+>Non-Word</I
+></SPAN
+> Zeichen und kann "weggeschmissen" werden. 
+  Ein Wort ist somit definiert als alle Zeichen die von zwei ASCII 0 Zeichen
+  umgrenzt werden. Auch wird mit dieser Art von Tokenizer eine anschließende Konvertierung zu Kleinbuchstaben
+  gespart, indem man eine entsprechende Tabelle verwendet.</P
+><P
+>Der Code hierfür findet sich im Verzeichnis <TT
+CLASS="FILENAME"
+>tokenizer/char-table-transform</TT
+>.</P
+><P
+>Drei Unterschiedliche Ausprägungen des CharTableTransform-Tokenizers sind vorhanden:
+    <P
+></P
+><UL
+><LI
+><P
+>Memory Mapped (MmapTokenizer)</P
+></LI
+><LI
+><P
+>Stream (StreamTokenizer)</P
+></LI
+><LI
+><P
+>String (StringTokenizer)</P
+></LI
+></UL
+>
+    wobei der Memory Mapped Tokenizer der schnellste ist, nicht zuletzt weil ein großer Teil in C
+    geschrieben ist. Der <TT
+CLASS="LITERAL"
+>StreamTokenizer</TT
+> operiert auf Streams (d.h. auch StdIn oder Sockets möglich die
+    nicht unbedingt eine feste Länge besitzen, wie dies für den Einsatz des MmapTokenizer erforderlich ist) 
+    und ist vollständig in SML geschrieben. Aufgrund des Fehlens der Funktion <TT
+CLASS="LITERAL"
+>TextIO.openString</TT
+> in MLton
+    wird der <TT
+CLASS="LITERAL"
+>StringTokenizer</TT
+> benötigt, der auf Strings operiert, wie der Name schon sagt.
+   </P
+><P
+>Zur Erzeugung von Character-Tables kann das Ruby-Script <TT
+CLASS="FILENAME"
+>createCharTable.rb</TT
+> im 
+   <TT
+CLASS="FILENAME"
+>tools</TT
+>
+   Verzeichnis verwendet werden. Es erzeugt dann entweder SML-Sourcecode, der in ein Programm einkompiliert werden
+   kann, oder eine Binär-Datei, die erst zur Laufzeit geladen wird.
+   Das Eingabe-File für eine Englische Character-Table könnte z.B. wie folgt aussehen: 
+<PRE
+CLASS="PROGRAMLISTING"
+>    add LOWERCASE
+    add UPPERCASE, LOWERCASE
+    add DIGITS</PRE
+>
+  Dies gibt an, daß alle kleinen Buchstaben (LOWERCASE) auf sich selbst abgebildet werden sollen, ebenso wie
+  alle Ziffern (DIGITS). Großbuchstaben (UPPERCASE) jedoch werden auf die entsprechenden Kleinbuchstaben abgebildet.
+  Alle anderen Zeichen besitzen den Wert 0 und werden somit nicht zur Bildung eines Wortes verwendet.
+  </P
+><P
+>Alle Tokenizer haben ein Subset von Funktionen mit gleichem Typ (z.B. <TT
+CLASS="LITERAL"
+>nextToken</TT
+>), 
+   verdeutlicht wird das durch die Signatur <TT
+CLASS="LITERAL"
+>TOKEN_STREAM</TT
+> (definiert in Datei 
+   <TT
+CLASS="FILENAME"
+>gh-defs.sml</TT
+>). Dies trifft auch für alle Filter zu.</P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN78"
+></A
+>2.1.2. Filter</H3
+><P
+> 
+  Filter haben als Eingabe einen TokenStream und liefern einen veränderten TokenStream als Ausgabe.
+  Die vorliegende Version implementiert nur einen Stopword-Filter, der haufige Wörter einer Sprache 
+  eleminiert. Die zu eleminierenden Wörter können z.B. aus einer Datei gelesen werden, die in jeder
+  Zeile ein Wort enthält. Diese Wörter werden dann einmalig in eine Hashtabelle eingefügt, um später
+  eine schnelle Abfrage zu gewähleisten, ob das Token ein Stopwort ist oder nicht. </P
+><P
+>Der Sourcecode des Stopword-Filters befindet sich im Verzeichnis <TT
+CLASS="FILENAME"
+>filter</TT
+> in
+  der Datei <TT
+CLASS="FILENAME"
+>stopword-filter.sml</TT
+>.
+  </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN84"
+></A
+>2.1.3. Die Index Datenstruktur</H3
+><P
+>  Die gebräuchlichste Datenstruktur für einen Wort-Index ist wohl eine Invertierte Wort Liste. 
+  Diesen Weg haben auch wir gewählt.</P
+><P
+>Zwei Ausprägungen sind denkbar:
+     <P
+></P
+><UL
+><LI
+><P
+>FrequencyInvertedList</P
+></LI
+><LI
+><P
+>PositionInvertedList</P
+></LI
+></UL
+>
+     wobei die <TT
+CLASS="LITERAL"
+>FrequencyInvertedList</TT
+> nur die Häufigkeiten des Auftretens eines
+     Wortes in einem Dokument speichert, die <TT
+CLASS="LITERAL"
+>PositionInvertedList</TT
+> dagegen alle 
+     Positionen eines Worten in einem Dokument. Letzteres benötigt sehr viel mehr Speicherplatz,
+     und ist in der Vorliegenden Version noch nicht implementiert. Vorteilhaft dagegen wäre die  
+     Möglichkeit der Abfrage ob Wörter in einem bestimmten Abstand zu anderen Wörtern stehen oder
+     ob diese benachbar sind.
+     </P
+><P
+>     Unsere Invertierte Liste verwendet eine Hashtabelle (Datei <TT
+CLASS="FILENAME"
+>ds/hash-table.sml</TT
+>),
+     und bildet damit die Wörter auf eine Splay-Tree Map ab. Letztere Datenstruktur bildet die Dokument-ID
+     auf die Häufigkeit des Auftretens ab.
+     Es findet also folgende Abbildung statt:
+     <A
+NAME="AEN97"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+>token -&#62; docid -&#62; frequency 
+     </BLOCKQUOTE
+>
+     Bzw. für die <TT
+CLASS="LITERAL"
+>PositionInvertedList</TT
+>:
+     <A
+NAME="AEN99"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+>token -&#62; docid -&#62; position list 
+     </BLOCKQUOTE
+>
+     </P
+><P
+>     Der Sourcecode für die Invertierte Liste ist in Datei <TT
+CLASS="FILENAME"
+>ds/inv-list.sml</TT
+>. 
+     </P
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="AEN102"
+></A
+>2.1.3.1. Dateiformat des Index</H4
+><P
+>     Im Folgenden ist die Struktur eines abgespeicherten Index beschrieben. 
+     </P
+><P
+>Der Header ist eine 28-Byte große Struktur, die wie folgt 
+     aufgebaut ist:
+    
+     <DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN106"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Byte-Position</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Daten-Typ</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Beschreibung</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>0 - 15</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>string</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Kennung (z.B. "FREQ_INV_LIST   ")</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>16 - 19</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>dword</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Version (z.B. 0x00010000 für 1.0)</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>20 - 23</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>dword</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Flags (z.Z. unbenutzt)</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>24 - 27</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>dword</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Größe des Index (Hashtabelle)</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+>
+        
+     </P
+><P
+>     Daraufhin folgt die Hashtabelle (4*<SPAN
+CLASS="emphasis"
+><I
+CLASS="EMPHASIS"
+>Größe des Index</I
+></SPAN
+> Bytes).
+     Jedes Bucket der Hashtabelle enthält entweder den Offset (relativ zum Ende der Hashtabelle) 
+     auf die Token mit demselben Hashwert, oder bei einem leeren Bucket den Wert -1 (0xFFFFFFFF).</P
+><P
+>     Die Daten (d.h. Token und Häufigkeiten) folgen direkt der Hashtabelle.
+     Jedes nicht-leere Bucket wird in der Daten-Sektion wie folgt abgebildet:
+    
+     <DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN133"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Byte-Position</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Daten-Typ</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Beschreibung</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>x - (x+3)</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>dword</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Anzahl der folgenden Tokens</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+>
+
+     Daraufhin folgt für jedes Token folgende Struktur:
+     
+     <DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN145"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Byte-Position</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Daten-Typ</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Beschreibung</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>y - (y+3)</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>dword</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Anzahl der Dokumente (in denen das Token vorkommt)</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>y+4</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>byte</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Länge des Token-Textes</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>(y+5) - (y+5+n)</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>string</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Token-Text</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+>
+
+     Hierauf folgt <SPAN
+CLASS="emphasis"
+><I
+CLASS="EMPHASIS"
+>Anzahl der Dokumente</I
+></SPAN
+>-mal:
+
+     <DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN166"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Byte-Position</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Daten-Typ</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Beschreibung</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>z - (z+3)</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>dword</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Dokument-ID</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>(z+4) - (z+7)</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>dword</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Häufigkeit des Auftretens in diesem Dokument</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+>
+
+     </P
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN182"
+></A
+>2.1.4. Das Indizier-Programm gh_index</H3
+><P
+>  Das Programm <TT
+CLASS="COMMAND"
+>gh_index</TT
+> ist die Schnittstelle für den Benutzer zum 
+  Anlegen eines Indexes. Der Sourcecode befindet sich in Datei <TT
+CLASS="FILENAME"
+>test/index.sml</TT
+>.
+
+  Man ruft es wie folgt von der Kommandozeile auf:
+  </P
+><P
+>  <TT
+CLASS="PROMPT"
+><TT
+CLASS="PROMPT"
+>%</TT
+> gh_index hashSize charTableFile stopwordFile indexFile docDB</TT
+>
+  </P
+>Die verschiedenen Parameter sind in der folgenden Tabelle erklärt:
+
+     <DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN190"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Parameter</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Beschreibung</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>hashSize</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Hiermit kann man die Größe der Hashtabelle angeben.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>charTableFile</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Die zu verwendente Char-Table Datei.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>stopwordFile</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Datei, die zu verwendende Stopwörter enthält.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>indexFile</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Index-Datei, die erzeugt werden soll.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>docDB</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Name der Dokument-Datenbank (ohne Endung .db).</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+><TT
+CLASS="COMMAND"
+>gh_index</TT
+>&nbsp; erwartet auf der Standard-Eingabe die Namen der Dateien, die es indizieren 
+     soll. Es können auch zwei Dateinamen, getrennt durch ein TAB-Zeichen angegeben werden, woraufhin
+     <TT
+CLASS="COMMAND"
+>gh_index</TT
+>&nbsp; die erste verwendet um die Datei zu tokenizen, die zweite jedoch in der 
+     Dokument-Datenbank abspeichert. Dies hat denn Sinn und Zweck, daß z.B. auch Webseiten indiziert werden können 
+     (müssen zuvor als lokale Datei gespeichert werden), ohne daß dabei die URL verloren geht.
+
+     <P
+>     Die Dokument-Datenbank ist eine DBM Hash-Datenbank, in der zu jeder Dokument-ID der zugehörige Dateiname steht. 
+     Eine DocDB kann auch für mehrere Indexe verwendet werden.
+     Der Sourcecode des DBM-Interface für SML ist im Verzeichnis <TT
+CLASS="FILENAME"
+>dbm</TT
+> zu finden (Dateien
+     <TT
+CLASS="FILENAME"
+>dbm.c</TT
+> und <TT
+CLASS="FILENAME"
+>dbm.sml</TT
+>). 
+     </P
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="AEN218"
+></A
+>2.1.4.1. Das Hilfprogramm gh_conv</H4
+><P
+>    Da <TT
+CLASS="COMMAND"
+>gh_index</TT
+> eine Liste von Dateinamen von StdIn ließt, muß man diese
+    irgenwie generieren. Unter UNIX bietet sich hierfür das Programm <TT
+CLASS="COMMAND"
+>find</TT
+> an: 
+    </P
+><P
+><TT
+CLASS="PROMPT"
+><TT
+CLASS="PROMPT"
+>%</TT
+> find . -type f -print</TT
+></P
+>liefert rekusiv eine Liste aller Dateien beginnend vom aktuellen Verzeichnis. Mit Hilfe von Pipes kann
+    man dies nun <TT
+CLASS="COMMAND"
+>gh_index</TT
+>&nbsp; auf StdIn umleiten:
+    <P
+><TT
+CLASS="PROMPT"
+><TT
+CLASS="PROMPT"
+>%</TT
+> find . -type f -print | gh_index ...</TT
+></P
+>Das Ruby-Skript <TT
+CLASS="COMMAND"
+>gh_conv</TT
+>&nbsp; kann dies ebenso, dient aber vorwiegend zur Konvertierung
+    sowie Filterung verschiedener Dateitypen. So ermittelt <TT
+CLASS="COMMAND"
+>gh_conv</TT
+>&nbsp; den Dateityp 
+    durch das UNIX-Hilfsprogramm <TT
+CLASS="COMMAND"
+>file</TT
+>&nbsp; und reagiert entsprechend dem Dateityp. Es kann:
+    <P
+></P
+><UL
+><LI
+><P
+>Dateien ignorieren (<TT
+CLASS="LITERAL"
+>:REJECT</TT
+>); sinnvoll bei Videos, Bildern oder Audio-Files
+         </P
+></LI
+><LI
+><P
+>Dateien <SPAN
+CLASS="emphasis"
+><I
+CLASS="EMPHASIS"
+>as is</I
+></SPAN
+> passieren lassen (<TT
+CLASS="LITERAL"
+>:ASIS</TT
+>)</P
+></LI
+><LI
+><P
+>ein externes Datei-Konvertierung Programm aufrufen (z.B. lynx, ps2ascii oder catdoc)</P
+></LI
+></UL
+>Aktionen für weitere Dateitypen können hinzugefügt werden, indem man im Programm (Datei 
+    <TT
+CLASS="FILENAME"
+>test/gh_conv</TT
+>) das Array FILE_TYPE_LIST entsprechend erweitert.
+
+    <P
+>    Aufrufen kann man es auf zwei Arten:
+    </P
+><P
+><TT
+CLASS="PROMPT"
+><TT
+CLASS="PROMPT"
+>%</TT
+> find . -print | gh_conv | gh_index ....</TT
+></P
+><P
+><TT
+CLASS="PROMPT"
+><TT
+CLASS="PROMPT"
+>%</TT
+> gh_conv /start/dir | gh_index ....</TT
+></P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN251"
+></A
+>2.2. Das Abfrage/Query Programm</H2
+><P
+>Das Query-Programm besteht aus einem <TT
+CLASS="LITERAL"
+>RankingParser</TT
+> (Files <TT
+CLASS="FILENAME"
+>query/ranking-parser.sml</TT
+>
+und <TT
+CLASS="FILENAME"
+>query/ranking.lex</TT
+>), der Struktur <TT
+CLASS="LITERAL"
+>RankedQuery</TT
+> (File <TT
+CLASS="FILENAME"
+>query/ranked-query.sml</TT
+>) sowie dem Sourcecode für das Programm selbst (<TT
+CLASS="FILENAME"
+>test/query.sml</TT
+>). 
+Der eigentliche Zugriff auf die Index-Datei findet in der InvertedList Struktur in Datei <TT
+CLASS="FILENAME"
+>ds/inv-list.sml</TT
+> 
+statt, oder falls eine extrem schnelle und Resourcen-schonende Version benötigt wird, kann <TT
+CLASS="FILENAME"
+>ds/query-inv-list.c</TT
+>
+verwendet werden.</P
+><P
+>Der <TT
+CLASS="LITERAL"
+>RankingParser</TT
+> transformiert eine Eingabe, wie etwa folgende:
+<A
+NAME="AEN264"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+>(+10)IR -diode +information retrieval</BLOCKQUOTE
+>
+in eine Liste von <TT
+CLASS="LITERAL"
+>RankedTerm</TT
+>'s:
+<A
+NAME="AEN266"
+></A
+><BLOCKQUOTE
+CLASS="BLOCKQUOTE"
+>[RankedTerm(IR, 10), RankedTerm(diode, -1), RankedTerm(information, 1), RankedTerm(retrieval, 1)]</BLOCKQUOTE
+></P
+><P
+><TT
+CLASS="LITERAL"
+>RankedQuery</TT
+> führt eine Abfrage auf den Index durch und berechnet für jedes auftretende 
+Dokument einen Score. 
+Die Dokumente sortiert nach absteigendem Score werden dann schließlich vom Hauptprogramm <TT
+CLASS="COMMAND"
+>gh_query</TT
+>
+ausgegeben.</P
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN270"
+></A
+>2.2.1. Das Query-Programm gh_query</H3
+><P
+>&#13;  Das Programm <TT
+CLASS="COMMAND"
+>gh_query</TT
+> ist die Schnittstelle für den Benutzer zum 
+  Abfragen eines Indexes. Der Sourcecode befindet sich in Datei <TT
+CLASS="FILENAME"
+>test/query.sml</TT
+>.
+
+  Man ruft es wie folgt von der Kommandozeile auf:
+  </P
+><P
+>  <TT
+CLASS="PROMPT"
+><TT
+CLASS="PROMPT"
+>%</TT
+> gh_query charTableFile stopwordFile indexFile docDB</TT
+>
+  </P
+>Die verschiedenen Parameter sind in der folgenden Tabelle erklärt:
+
+     <DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN278"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Parameter</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Beschreibung</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>charTableFile</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Die zu verwendente Char-Table Datei.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>stopwordFile</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Datei, die zu verwendende Stopwörter enthält.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>indexFile</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Index-Datei, die abgefragt werden soll.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>docDB</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Name der Dokument-Datenbank (ohne Endung .db).</TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+><TT
+CLASS="COMMAND"
+>gh_query</TT
+>&nbsp; erwartet auf der Standard-Eingabe eine Abfrage (siehe weiter oben).
+     Daraufhin gibt das Programm auf der Standard-Ausgabe die passenden Dokumente geordnet nach höchstem
+     Score aus.
+
+  </DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x298.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Limitations</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

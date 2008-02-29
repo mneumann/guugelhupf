@@ -1,0 +1,699 @@
+<HTML
+><HEAD
+><TITLE
+>Wahl einer geeigneten Hash-Funktion</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Wahl der geeigneten Programmiersprache"
+HREF="x396.html"><LINK
+REL="NEXT"
+TITLE="Evaluierung vorhandender Suchmaschinen und Frameworks"
+HREF="x585.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="docbook.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+></TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x396.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x585.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN435"
+></A
+>7. Wahl einer geeigneten Hash-Funktion</H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN437"
+></A
+>7.1. Kriterien für die Auswahl</H2
+><P
+>    <P
+></P
+><UL
+><LI
+><P
+>          Gleichmäßige Verteilung (geringe Anzahl von Kollisionen).
+
+          <P
+></P
+><UL
+><LI
+><P
+>Akzeptabler Worstcase, d.h. Maximum der Kollisionen
+                pro Zelle sollte möglichst gering sein.</P
+></LI
+><LI
+><P
+>Verteilung sollte auch dann noch erhalten bleiben 
+                wenn anstelle von Modulo zur Beschränkung auf einen 
+                Wertebereich, eine Bitweise UND-Verknüpfung verwendet wird 
+                (wichtig für Performance).</P
+></LI
+></UL
+>
+        </P
+></LI
+><LI
+><P
+>          Performance.
+          <P
+></P
+><UL
+><LI
+><P
+>                Keine Verwendung von Modulo-Operationen, da diese im Vergleich 
+                zu Bitweisen Operationen oder Additionen sehr langsam sind 
+                (gerade auf RISC Computern können diese die 100-fache Zeit
+                benötigen). 
+            </P
+></LI
+></UL
+>
+        </P
+></LI
+></UL
+>
+
+  </P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN453"
+></A
+>7.2. Vorstellung einiger Hash-Algorithmen</H2
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN455"
+></A
+>7.2.1. Knuth's Algorithmus</H3
+><P
+>Die in Knuth's "The Art of Computer Programming" (Volume 3 "Sorting and Searching", Kapitel 6.4)
+      vorgestelle Hash-Funktion ist vielleicht eine der bekanntesten überhaupt. Dennoch ist ihre Verteilung
+      nur mittelmäßig. Darüber hinaus verwendet Knuth eine Modulo Operation (mit einer Primzahl) zur 
+      Beschränkung auf ein Intervall, welches ihre Performance mindert und wegen der verwendeten Primzahl
+      ein automatisches Vergrößern der Hashtabelle komplizierter macht.</P
+><PRE
+CLASS="PROGRAMLISTING"
+>    unsigned long 
+    knuth_hash(unsigned char *str, int len) 
+    {
+      unsigned long hash; 
+    
+      for (hash=len; len--;) 
+      {
+        hash = ((hash&#60;&#60;5)^(hash&#62;&#62;27))^*str++;
+      }
+      return hash;     // % prime
+    }
+            </PRE
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN459"
+></A
+>7.2.2. Kernigham und Ritchies Algorithmus</H3
+><P
+>Kernigham und Ritchies Algorithmus ist eine einfache additive Hash-Funktion, die 
+        jedoch ungeeignet ist für seriöse Anwendungen.</P
+><PRE
+CLASS="PROGRAMLISTING"
+>    unsigned long
+    k_r(unsigned char *str)
+    {
+      unsigned long hash = 0;
+      int c;
+    
+      while (c = *str++)
+        hash += c;
+                      
+      return hash;
+    } 
+            </PRE
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN463"
+></A
+>7.2.3. D.J. Bernsteins Algorithmus</H3
+><PRE
+CLASS="PROGRAMLISTING"
+>    unsigned long
+    djb2(unsigned char *str)
+    {
+      unsigned long hash = 5381;
+      int c;
+    
+      while (c = *str++)
+        hash = ((hash &#60;&#60; 5) + hash) + c; /* hash * 33 + c */
+    
+      return hash;
+    }
+            </PRE
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN466"
+></A
+>7.2.4. SDBM Algorithmus</H3
+><P
+>        Dieser Algorithmus wird in Sleepycat's Datenbank BDB (Berkeley DataBase) verwendet.</P
+><PRE
+CLASS="PROGRAMLISTING"
+>    unsigned long
+    sdbm(unsigned char *str)
+    {
+      unsigned long hash = 0;
+      int c;
+    
+      while (c = *str++)
+        hash = c + (hash &#60;&#60; 6) + (hash &#60;&#60; 16) - hash;
+    
+      return hash;
+    }
+            </PRE
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN470"
+></A
+>7.2.5. P.J. Weinberg Algorithmus</H3
+><PRE
+CLASS="PROGRAMLISTING"
+>    unsigned long 
+    hashpjw(unsigned char* str)
+    {
+      unsigned long hash=0;
+      unsigned long g;
+    
+      for(;*str;++str) 
+      {
+        hash = (hash &#60;&#60; 4)+ *str;
+        if(g=hash&#38;0xf0000000) 
+        {
+          hash ^= g&#62;&#62;24;
+          hash ^= g;
+        }
+      }
+    
+      return hash;
+    }
+            </PRE
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN473"
+></A
+>7.2.6. OCaml's Algorithmus</H3
+><P
+>Dieser Algorithmus wird in der aktuellen Version (3.04) von Objective Caml verwendet.</P
+><PRE
+CLASS="PROGRAMLISTING"
+>    unsigned long
+    ocaml_hash(unsigned char *str, int len) 
+    {
+      unsigned long hash = 0;
+      int i;
+    
+      for (i=0; i&#60;len; i++) {
+        hash = hash*19 + str[i];
+      }
+    
+      return hash;
+    }
+            </PRE
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN477"
+></A
+>7.2.7. SML's Algorithmus</H3
+><P
+>Dieser Algorithmus wird in der aktuellen Version (110.40) von SML/NJ (Standard ML/New Jersey) verwendet.</P
+><PRE
+CLASS="PROGRAMLISTING"
+>    unsigned long
+    sml_hash(unsigned char *str, int len) {
+      unsigned long hash = 0;
+      int i;
+    
+      for (i=0; i&#60;len; i++) 
+      {
+        hash = 33*hash + 720 + str[i];
+      }
+    
+      return hash;
+    }
+            </PRE
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN481"
+></A
+>7.2.8. STL's Algorithmus</H3
+><P
+>Dieser Algorithmus wird/wurde (?) in der STL (Standard Template Library) von C++ verwendet.</P
+><PRE
+CLASS="PROGRAMLISTING"
+>    unsigned long
+    stl_hash(unsigned char *str, int len) 
+    {
+      unsigned long hash = 0;
+      int i;
+    
+      for (i=0; i&#60;len; i++) 
+      {
+        hash = 5*hash + str[i];
+      }
+    
+      return hash;
+    }
+            </PRE
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN485"
+></A
+>7.2.9. Java's Algorithmus</H3
+><P
+>Dieser Algorithmus wird (?) in Java's SDK verwendet.</P
+><PRE
+CLASS="PROGRAMLISTING"
+>    unsigned long
+    java_hash(unsigned char *str, int len) 
+    {
+      unsigned long hash = 0;
+      int i;
+    
+      for (i=0; i&#60;len; i++) 
+      {
+        hash += ((unsigned long)s[i]*31)^(n-1-i);
+      }
+      return hash;
+    }
+            </PRE
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN489"
+></A
+>7.2.10. Fowler/Noll/Vo Algorithmus</H3
+><P
+>FNV ist ein relativ neuer und guter Hash-Algorithmus. Er wurde von Phong Vo, Glenn Fowler
+        entwickelt und von Landon Curt Noll verbessert.</P
+><P
+>        <SPAN
+CLASS="QUOTE"
+>"<TT
+CLASS="LITERAL"
+>FNV hashes are designed to be fast while maintaining a low
+          collision rate. The FNV speed allows one to quickly hash lots
+          of data while maintaining a reasonable collision rate.</TT
+>"</SPAN
+>
+      </P
+><P
+>Mehr Information zum Algorithmus sowie eine Implementation in C ist im WWW unter folgender Adresse 
+        verfügbar: 
+        <A
+HREF="http://www.isthe.com/chongo/tech/comp/fnv/index.html"
+TARGET="_top"
+>http://www.isthe.com/chongo/tech/comp/fnv/index.html</A
+>.
+      </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN497"
+></A
+>7.2.11. Bob Jenkins Algorithmus</H3
+><P
+>Dies ist ein sehr schneller und guter Hash-Algorithmus. Er kommt ohne Multiplikation
+        oder Modulo/Divison aus. Der berechneter Hash-Wert kann mittels Bitweisem UND auf einen
+        kleineren Wertebereich eingeschränkt werden.</P
+><P
+>Mehr Information zum Algorithmus sowie eine Implementation in C ist im WWW unter folgenden Adressen
+        verfügbar:
+
+        <A
+HREF="http://burtleburtle.net/bob/hash/evahash.html"
+TARGET="_top"
+>http://burtleburtle.net/bob/hash/evahash.html</A
+> und 
+        <A
+HREF="http://burtleburtle.net/bob/hash/index.html#lookup"
+TARGET="_top"
+>http://burtleburtle.net/bob/hash/index.html#lookup</A
+> (Dateien <TT
+CLASS="FILENAME"
+>lookupa.h</TT
+> und <TT
+CLASS="FILENAME"
+>lookupa.c</TT
+>)
+      </P
+><P
+>Im folgenden wird dieser Algorihmus <SPAN
+CLASS="emphasis"
+><I
+CLASS="EMPHASIS"
+>NEW</I
+></SPAN
+> genannt.</P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN507"
+></A
+>7.3. Vergleich der Algorithmen</H2
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN509"
+></A
+>7.3.1. Qualität der Hash-Funktionen</H3
+><P
+>Für den Vergleich wurde jede Hash-Funktion mit einem Testset von ungefähr 4,3 Millionen 
+        unterschiedlichen Wörtern "gefüttert" (keine binären Daten). 
+        Dabei wurden die Kollisionen bei einer n-Zellen großen Hash-Tabelle aufgezeichnet (wobei n eine
+        2er Potenz ist) und daraus die Standard-Abweichung, Anzahl der leeren Zellen sowie die maximale 
+        Kollisionsrate (einer Zelle) errechnet. Gerade Letzteres ist wichtig zur besseren Abschätzung eines 
+        <SPAN
+CLASS="emphasis"
+><I
+CLASS="EMPHASIS"
+>realen</I
+></SPAN
+> Worstcases.
+      </P
+><DIV
+CLASS="WARNING"
+><BLOCKQUOTE
+CLASS="WARNING"
+><P
+><B
+>Warning</B
+>Es wurde nicht beachtet, daß durch die Anwendung von Modulo mit 
+          einer 2er Potenz zur Einschränkung des Wertebereiches eine Verschlechterung der Hash-Funktion 
+          entstehen kann (bei den Hash-Funktionen wo Modulo angewandt wurde). 
+          Oft wird eine Primzahl bei einer Modulo Operation verwendet.</P
+></BLOCKQUOTE
+></DIV
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="AEN515"
+></A
+>7.3.1.1. Standard-Abweichung</H4
+><P
+>          Deutlich lässt sich anhand der Diagramme erkennen, daß die besten Hash-Funktionen, der 
+          Fowler/Noll/Vo (FNV) sowie der Bob Jenkiens (NEW) Algorithmus sind. Für größere n jedoch
+          kommt der SDBM Algorithmus sehr nahe an beide heran.
+        </P
+><P
+>          <IMG
+SRC="images/hashing/Variance0.png">
+        </P
+><P
+>          <IMG
+SRC="images/hashing/Variance1.png">
+        </P
+><P
+>          <IMG
+SRC="images/hashing/Variance2.png">
+        </P
+><P
+>          <IMG
+SRC="images/hashing/Variance3.png">
+        </P
+></DIV
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="AEN534"
+></A
+>7.3.1.2. Anzahl leerer Zellen</H4
+><P
+>          Auch bei diesem Test erkennt man deutlich, daß die Algorithmen FNV, NEW sowie SDBM 
+          am besten abschneiden.
+        </P
+><P
+>          <IMG
+SRC="images/hashing/Empty0.png">
+        </P
+><P
+>          <IMG
+SRC="images/hashing/Empty1.png">
+        </P
+></DIV
+><DIV
+CLASS="SECT4"
+><H4
+CLASS="SECT4"
+><A
+NAME="AEN545"
+></A
+>7.3.1.3. Maximale Kollisionsrate</H4
+><P
+>          Auch in diesem Test schneiden SDBM, FNV und NEW sehr gut ab. 
+        </P
+><P
+>          <IMG
+SRC="images/hashing/Max0.png">
+        </P
+><P
+>          <IMG
+SRC="images/hashing/Max1.png">
+        </P
+><P
+>          <IMG
+SRC="images/hashing/Max2.png">
+        </P
+></DIV
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN560"
+></A
+>7.3.2. Performance der Hash-Funktionen</H3
+><P
+>        Getestet wurde die Berechnung von Wörter der Länge 1 bis 24. 
+      </P
+><P
+>        Der SDBM Algorithmus ist sehr schnell, NEW liegt im Mittelfeld, FNV bildet das Schlusslicht!
+      </P
+><P
+>        <IMG
+SRC="images/hashing/Time0.png">
+      </P
+><P
+>        <IMG
+SRC="images/hashing/Time1.png">
+      </P
+></DIV
+><DIV
+CLASS="SECT3"
+><H3
+CLASS="SECT3"
+><A
+NAME="AEN572"
+></A
+>7.3.3. Fazit</H3
+><P
+>        Besonders positiv aufgefallen sind folgende drei Algorithmen:
+        <P
+></P
+><UL
+><LI
+><P
+>FNV</P
+></LI
+><LI
+><P
+>NEW</P
+></LI
+><LI
+><P
+>SDBM</P
+></LI
+></UL
+>
+      </P
+><P
+>Wobei FNV von der Qualität der Hash-Werte am besten abschneidet (gerade für kleinere n), 
+        jedoch wegen der Performance (FNV ist der langsamste Algorithmus) ausscheidet.</P
+><P
+>Der NEW Algorithmus unterscheidet sich in der Qualität der Hash-Werte kaum vom 
+        FNV Algorithmus, jedoch ist er fast doppelt so schnell.</P
+><P
+>        Der SDBM Algorithmus ist mehr als 2.5 mal so schnell wie NEW und ist in der Qualität nicht
+        wesentlich schlechter als dieser. Besonders für große n sind alle drei Algorithmen in der
+        Qualität nahezu gleich.</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x396.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x585.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Wahl der geeigneten Programmiersprache</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Evaluierung vorhandender Suchmaschinen und Frameworks</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>
