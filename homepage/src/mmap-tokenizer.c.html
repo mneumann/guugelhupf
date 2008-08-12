@@ -1,0 +1,104 @@
+<html>
+<head>
+<title>guugelhupf\src\gh\tokenizer\char-table-transform\mmap\mmap-tokenizer.c</title>
+<meta name="Generator" content="Vim/6.0">
+</head>
+<body bgcolor="#ffffff" text="#000000">
+<pre>
+<font color="#0000ff">/*</font>
+<font color="#0000ff"> * Copyright (c) 2002 Michael Neumann &lt;neumann@s-direktnet.de&gt;</font>
+<font color="#0000ff"> */</font>
+
+<font color="#a020f0">#if (defined (__FreeBSD__))</font>
+<font color="#a020f0">#include </font><font color="#ff00ff">&lt;sys/types.h&gt;</font>
+<font color="#a020f0">#endif</font>
+
+<font color="#a020f0">#include </font><font color="#ff00ff">&lt;sys/mman.h&gt;</font>
+<font color="#a020f0">#include </font><font color="#ff00ff">&quot;libmlton.h&quot;</font>
+
+<font color="#a020f0">#ifndef MIN</font>
+<font color="#a020f0">#define MIN(a,b) ((a) &lt; (b) ? (a) : (b))</font>
+<font color="#a020f0">#endif</font>
+
+<font color="#2e8b57"><b>struct</b></font> MmapTokenizer {
+  <font color="#2e8b57"><b>char</b></font> *ptr; <font color="#0000ff">/*</font><font color="#0000ff"> start address of memory */</font>
+  <font color="#2e8b57"><b>char</b></font> *cur_ptr; <font color="#0000ff">/*</font><font color="#0000ff"> current position in memory */</font>
+  <font color="#2e8b57"><b>char</b></font> *end_ptr; <font color="#0000ff">/*</font><font color="#0000ff"> last address of memeory frame */</font>
+  <font color="#2e8b57"><b>unsigned</b></font> <font color="#2e8b57"><b>long</b></font> length; <font color="#0000ff">/*</font><font color="#0000ff"> length of memory frame */</font>
+};
+
+<font color="#2e8b57"><b>const</b></font> <font color="#2e8b57"><b>int</b></font> MmapTokenizer_structSize = <font color="#804040"><b>sizeof</b></font>(<font color="#2e8b57"><b>struct</b></font> MmapTokenizer);
+<font color="#2e8b57"><b>const</b></font> <font color="#2e8b57"><b>int</b></font> MmapTokenizer_maxWordLen = <font color="#ff00ff">255</font>;
+
+<font color="#2e8b57"><b>bool</b></font>
+MmapTokenizer_init(Pointer p, Fd handle, Size length) {
+  <font color="#2e8b57"><b>struct</b></font> MmapTokenizer *s = (<font color="#2e8b57"><b>struct</b></font> MmapTokenizer*) p;
+
+  assert (GC_arrayNumElements(p) &gt;= <font color="#804040"><b>sizeof</b></font>(<font color="#2e8b57"><b>struct</b></font> MmapTokenizer));
+
+  s-&gt;ptr = mmap(<font color="#ff00ff">NULL</font>, length, PROT_READ, MAP_PRIVATE, handle, <font color="#ff00ff">0</font>);
+
+  <font color="#804040"><b>if</b></font> (s-&gt;ptr == MAP_FAILED) {
+    <font color="#804040"><b>return</b></font> FALSE;
+  }
+
+  s-&gt;length = length;
+
+  s-&gt;cur_ptr = s-&gt;ptr;
+  s-&gt;end_ptr = s-&gt;ptr + s-&gt;length;
+  <font color="#804040"><b>return</b></font> TRUE;
+}
+
+<font color="#2e8b57"><b>void</b></font>
+MmapTokenizer_free(Pointer p) {
+  <font color="#2e8b57"><b>struct</b></font> MmapTokenizer *s = (<font color="#2e8b57"><b>struct</b></font> MmapTokenizer*) p;
+
+  assert (GC_arrayNumElements(p) &gt;= <font color="#804040"><b>sizeof</b></font>(<font color="#2e8b57"><b>struct</b></font> MmapTokenizer));
+
+  munmap(s-&gt;ptr, s-&gt;length);
+}
+
+
+<font color="#0000ff">/*</font>
+<font color="#0000ff"> * returns size of token (EOS=0) and the token itself in buf.</font>
+<font color="#0000ff"> */</font>
+<font color="#2e8b57"><b>int</b></font>
+MmapTokenizer_nextToken(Pointer p, Pointer charTable, Pointer buf) {
+  <font color="#2e8b57"><b>struct</b></font> MmapTokenizer *s = (<font color="#2e8b57"><b>struct</b></font> MmapTokenizer*) p;
+  <font color="#2e8b57"><b>char</b></font> c;
+  <font color="#2e8b57"><b>char</b></font> *end_ptr;
+  <font color="#2e8b57"><b>char</b></font> *start_ptr;
+  <font color="#2e8b57"><b>char</b></font> *cur_ptr;
+
+  assert (GC_arrayNumElements(p) &gt;= <font color="#804040"><b>sizeof</b></font>(<font color="#2e8b57"><b>struct</b></font> MmapTokenizer));
+  assert (GC_arrayNumElements(charTable) == <font color="#ff00ff">256</font>);
+  assert (GC_arrayNumElements(buf) &gt;= MmapTokenizer_maxWordLen);
+
+  <font color="#0000ff">/*</font><font color="#0000ff"> load values from struct into local variables */</font>
+  cur_ptr = s-&gt;cur_ptr;
+  end_ptr = s-&gt;end_ptr;
+
+
+  <font color="#0000ff">/*</font><font color="#0000ff"> skip non-word characters (non-word characters are those for which </font>
+<font color="#0000ff">   * in the characterTable a \0 is stored.)</font>
+<font color="#0000ff">   */</font>
+  <font color="#804040"><b>while</b></font> (cur_ptr != end_ptr &amp;&amp; charTable[*((<font color="#2e8b57"><b>unsigned</b></font> <font color="#2e8b57"><b>char</b></font>*)cur_ptr)] == <font color="#ff00ff">0</font>) {
+    cur_ptr++;
+  }
+
+  <font color="#0000ff">/*</font><font color="#0000ff"> cosume word characters until a non-word character occures */</font>
+  start_ptr = cur_ptr;
+  end_ptr = (<font color="#2e8b57"><b>char</b></font>*) MIN(cur_ptr + MmapTokenizer_maxWordLen, end_ptr);
+  <font color="#804040"><b>while</b></font> (cur_ptr != end_ptr &amp;&amp; (c=charTable[*((<font color="#2e8b57"><b>unsigned</b></font> <font color="#2e8b57"><b>char</b></font>*)cur_ptr)]) != <font color="#ff00ff">0</font>) {
+    *buf++ = c;  <font color="#0000ff">/*</font><font color="#0000ff"> store character in SML buffer */</font>
+    cur_ptr++;
+  }
+
+  <font color="#0000ff">/*</font><font color="#0000ff"> store value back to struct */</font>
+  s-&gt;cur_ptr = cur_ptr;
+
+  <font color="#804040"><b>return</b></font> cur_ptr - start_ptr;
+}
+</pre>
+</body>
+</html>

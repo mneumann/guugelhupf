@@ -1,0 +1,174 @@
+<html>
+<head>
+<title>guugelhupf\src\gh\query\ranked-query.sml</title>
+<meta name="Generator" content="Vim/6.0">
+</head>
+<body bgcolor="#ffffff" text="#000000">
+<pre>
+<font color="#0000ff">(*</font>
+<font color="#0000ff"> * Copyright (c) 2002 Michael Neumann &lt;neumann@s-direktnet.de&gt;</font>
+<font color="#0000ff"> *)</font>
+
+<font color="#0000ff">(* tokenizes and filters stopwords *)</font>
+<font color="#804040"><b>structure</b></font><font color="#a020f0"> SimpleAnalyser</font> <font color="#804040"><b>=</b></font>
+<font color="#a020f0">struct</font>
+   <font color="#804040"><b>open</b></font> <font color="#a020f0">DS</font>
+   <font color="#804040"><b>open</b></font> <font color="#a020f0">Tokenizer.CharTableTransform</font>
+
+   <font color="#804040"><b>structure</b></font><font color="#a020f0"> Tokenizer</font> <font color="#804040"><b>=</b></font> <font color="#a020f0">StringTokenizer</font>
+   <font color="#804040"><b>structure</b></font><font color="#a020f0"> TS</font> <font color="#804040"><b>=</b></font> <font color="#a020f0">StopwordFilterFn</font>(<font color="#a020f0">structure</font> <font color="#ff00ff">TS</font> <font color="#804040"><b>=</b></font> <font color="#ff00ff">Tokenizer</font>)
+
+   <font color="#804040"><b>fun</b></font> tokenize <font color="#804040"><b>(</b></font>str: <font color="#2e8b57"><b>string</b></font>, charTable<font color="#804040"><b>)</b></font> : <font color="#2e8b57"><b>string</b></font> <font color="#2e8b57"><b>list</b></font> <font color="#804040"><b>=</b></font>
+      <font color="#804040"><b>let</b></font>
+         <font color="#804040"><b>val</b></font> ts <font color="#804040"><b>=</b></font> <font color="#a020f0">Tokenizer</font>.new <font color="#804040"><b>(</b></font>str, charTable<font color="#804040"><b>)</b></font>
+         <font color="#804040"><b>fun</b></font> tokenTerm <font color="#804040"><b>(</b></font><font color="#ff00ff">Token</font> tok<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> #term tok
+      <font color="#804040"><b>in</b></font>
+         <font color="#a020f0">Tokenizer</font>.map tokenTerm ts
+      <font color="#804040"><b>end</b></font>
+
+  <font color="#0000ff">(* return two lists, the first which contains the passed tokens, the second</font>
+<font color="#0000ff">     the filtered ones *)</font>
+   <font color="#804040"><b>fun</b></font> filter <font color="#804040"><b>(</b></font>l: 'a <font color="#2e8b57"><b>list</b></font>, itemFn: 'a -&gt; <font color="#2e8b57"><b>string</b></font>, stopwordTable: <font color="#a020f0">TS</font>.table<font color="#804040"><b>)</b></font> : <font color="#804040"><b>(</b></font>'a <font color="#2e8b57"><b>list</b></font> <font color="#804040"><b>*</b></font> 'a <font color="#2e8b57"><b>list</b></font><font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+      <font color="#804040"><b>case</b></font> l
+       <font color="#804040"><b>of</b></font> <font color="#ff00ff">[]</font> <font color="#804040"><b>=</b></font>&gt; <font color="#804040"><b>(</b></font><font color="#ff00ff">[]</font>, <font color="#ff00ff">[]</font><font color="#804040"><b>)</b></font>
+        <font color="#804040"><b>|</b></font> <font color="#804040"><b>(</b></font>x <font color="#804040"><b>::</b></font> xs<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>&gt; <font color="#804040"><b>(let</b></font>
+                           <font color="#804040"><b>val</b></font> <font color="#804040"><b>(</b></font>a, b<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> filter <font color="#804040"><b>(</b></font>xs, itemFn, stopwordTable<font color="#804040"><b>)</b></font>
+                        <font color="#804040"><b>in</b></font>
+                           <font color="#804040"><b>if</b></font> <font color="#a020f0">HashTable</font>.hasKey stopwordTable <font color="#804040"><b>(</b></font>itemFn x<font color="#804040"><b>)</b></font>
+                           <font color="#804040"><b>then</b></font> <font color="#804040"><b>(</b></font>a, x <font color="#804040"><b>::</b></font> b<font color="#804040"><b>)</b></font>
+                           <font color="#804040"><b>else</b></font> <font color="#804040"><b>(</b></font>x <font color="#804040"><b>::</b></font> a, b<font color="#804040"><b>)</b></font>
+                        <font color="#804040"><b>end)</b></font>
+
+<font color="#a020f0">end</font>
+
+<font color="#804040"><b>structure</b></font><font color="#a020f0"> RankedQuery</font> <font color="#804040"><b>=</b></font>
+<font color="#a020f0">struct</font>
+
+<font color="#804040"><b>open</b></font> <font color="#a020f0">DS</font>
+<font color="#804040"><b>open</b></font> <font color="#a020f0">RankingParser</font>
+
+<font color="#0000ff">(* maps doc_id's to ranks *)</font>
+<font color="#804040"><b>structure</b></font><font color="#a020f0"> DocIdMap</font> <font color="#804040"><b>=</b></font> <font color="#a020f0">SplayMapFn</font> (<font color="#a020f0">struct</font>
+                                 <font color="#804040"><b>type</b></font> ord_key <font color="#804040"><b>=</b></font> doc_id
+                                 <font color="#804040"><b>val</b></font> compare <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.compare
+                                 <font color="#a020f0">end</font>)
+
+
+<font color="#804040"><b>fun</b></font> analyseQuery <font color="#804040"><b>{</b></font>strm, charTable, stopwordTable, outputFn<font color="#804040"><b>}</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> p <font color="#804040"><b>=</b></font> outputFn
+
+      <font color="#804040"><b>val</b></font> q <font color="#804040"><b>=</b></font> <font color="#a020f0">RankingParser</font>.parse strm
+      <font color="#804040"><b>val</b></font> <font color="#804040"><b>_</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font>print <font color="#ff00ff">&quot;! parsed: &quot;</font><font color="#804040"><b>;</b></font> <font color="#a020f0">RankingParser</font>.output q p<font color="#804040"><b>)</b></font>
+
+      <font color="#804040"><b>fun</b></font> fld <font color="#804040"><b>(</b></font><font color="#ff00ff">RankedTerm</font> <font color="#804040"><b>(</b></font>term, rank<font color="#804040"><b>)</b></font>, lst<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+         <font color="#804040"><b>let</b></font>
+            <font color="#804040"><b>val</b></font> terms <font color="#804040"><b>=</b></font> <font color="#a020f0">SimpleAnalyser</font>.tokenize <font color="#804040"><b>(</b></font>term, charTable<font color="#804040"><b>)</b></font>
+         <font color="#804040"><b>in</b></font>
+            lst @ <font color="#a020f0">List</font>.map <font color="#804040"><b>(fn</b></font> t <font color="#804040"><b>=</b></font>&gt; <font color="#ff00ff">RankedTerm</font><font color="#804040"><b>(</b></font>t, rank<font color="#804040"><b>))</b></font> terms
+         <font color="#804040"><b>end</b></font>
+
+      <font color="#804040"><b>val</b></font> q <font color="#804040"><b>=</b></font> <font color="#a020f0">List</font>.foldl fld <font color="#ff00ff">[]</font> q
+      <font color="#804040"><b>val</b></font> <font color="#804040"><b>_</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font>print <font color="#ff00ff">&quot;! tokenized: &quot;</font><font color="#804040"><b>;</b></font> <font color="#a020f0">RankingParser</font>.output q p<font color="#804040"><b>)</b></font>
+
+      <font color="#804040"><b>val</b></font> <font color="#804040"><b>(</b></font>q, stopwords<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> <font color="#a020f0">SimpleAnalyser</font>.filter <font color="#804040"><b>(</b></font>q,
+                                                  <font color="#804040"><b>(fn</b></font> <font color="#804040"><b>(</b></font><font color="#ff00ff">RankedTerm</font> <font color="#804040"><b>(</b></font>i,<font color="#804040"><b>_</b></font><font color="#804040"><b>))</b></font> <font color="#804040"><b>=</b></font>&gt; i<font color="#804040"><b>)</b></font>,
+                                                  stopwordTable<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>val</b></font> <font color="#804040"><b>_</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font>print <font color="#ff00ff">&quot;! filtered: &quot;</font><font color="#804040"><b>;</b></font> <font color="#a020f0">RankingParser</font>.output q p<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>val</b></font> <font color="#804040"><b>_</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font>print <font color="#ff00ff">&quot;! stopwords: &quot;</font><font color="#804040"><b>;</b></font>
+               <font color="#a020f0">List</font>.app <font color="#804040"><b>(fn</b></font> <font color="#804040"><b>(</b></font><font color="#ff00ff">RankedTerm</font> <font color="#804040"><b>(</b></font>i,<font color="#804040"><b>_</b></font><font color="#804040"><b>))</b></font> <font color="#804040"><b>=</b></font>&gt; print <font color="#804040"><b>(</b></font>i <font color="#804040"><b>^</b></font> <font color="#ff00ff">&quot; &quot;</font><font color="#804040"><b>))</b></font> stopwords<font color="#804040"><b>;</b></font>
+               print <font color="#ff00ff">&quot;\n&quot;</font><font color="#804040"><b>)</b></font>
+
+   <font color="#804040"><b>in</b></font>
+      q
+   <font color="#804040"><b>end</b></font>
+
+
+<font color="#804040"><b>fun</b></font> doQuery <font color="#804040"><b>(</b></font>rankedTerms, file, hash<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> res <font color="#804040"><b>=</b></font> <font color="#a020f0">FrequencyInvertedList</font>.lookupTermsInFile <font color="#804040"><b>{</b></font>
+                   file <font color="#804040"><b>=</b></font> file,
+                   hash <font color="#804040"><b>=</b></font> hash,
+                   terms <font color="#804040"><b>=</b></font> <font color="#a020f0">List</font>.map <font color="#804040"><b>(fn</b></font> <font color="#804040"><b>(</b></font><font color="#ff00ff">RankedTerm</font><font color="#804040"><b>(</b></font>s,<font color="#804040"><b>_</b></font><font color="#804040"><b>))</b></font> <font color="#804040"><b>=</b></font>&gt; s<font color="#804040"><b>)</b></font> rankedTerms <font color="#804040"><b>}</b></font>
+
+      <font color="#804040"><b>fun</b></font> comb <font color="#804040"><b>(</b></font><font color="#ff00ff">RankedTerm</font> <font color="#804040"><b>(</b></font>term, rank<font color="#804040"><b>)</b></font>, <font color="#804040"><b>(</b></font>t, queryResult<font color="#804040"><b>))</b></font> <font color="#804040"><b>=</b></font>
+         <font color="#804040"><b>let</b></font>
+            <font color="#804040"><b>val</b></font> <font color="#804040"><b>_</b></font> <font color="#804040"><b>=</b></font> assert <font color="#804040"><b>(</b></font>term <font color="#804040"><b>=</b></font> t<font color="#804040"><b>)</b></font>
+         <font color="#804040"><b>in</b></font>
+            <font color="#804040"><b>(</b></font>term, rank, queryResult<font color="#804040"><b>)</b></font> <font color="#0000ff">(* queryResult: (doc_id * word) list *)</font>
+         <font color="#804040"><b>end</b></font>
+   <font color="#804040"><b>in</b></font>
+      <font color="#a020f0">ListPair</font>.map comb <font color="#804040"><b>(</b></font>rankedTerms, res<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>end</b></font>
+
+<font color="#0000ff">(* each document is ranked as follows: &quot;frequency * rank&quot; *)</font>
+<font color="#804040"><b>fun</b></font> rankQuery l scoreFn <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> map : <font color="#804040"><b>(</b></font><font color="#2e8b57"><b>int</b></font> ref<font color="#804040"><b>)</b></font> <font color="#a020f0">DocIdMap</font>.map <font color="#804040"><b>=</b></font> <font color="#a020f0">DocIdMap</font>.empty
+
+      <font color="#804040"><b>fun</b></font> sort c <font color="#ff00ff">[]</font> <font color="#804040"><b>=</b></font> <font color="#ff00ff">[]</font>
+        <font color="#804040"><b>|</b></font> sort c <font color="#804040"><b>(</b></font>s<font color="#804040"><b>::</b></font>xs<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> sort c <font color="#804040"><b>(</b></font><font color="#a020f0">List</font>.filter <font color="#804040"><b>(fn</b></font> x <font color="#804040"><b>=</b></font>&gt; c<font color="#804040"><b>(</b></font>x, s<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> <font color="#ff00ff">LESS</font><font color="#804040"><b>)</b></font> xs<font color="#804040"><b>)</b></font> @
+                           <font color="#804040"><b>(</b></font>s <font color="#804040"><b>::</b></font> sort c <font color="#804040"><b>(</b></font><font color="#a020f0">List</font>.filter <font color="#804040"><b>(fn</b></font> x <font color="#804040"><b>=</b></font>&gt; c<font color="#804040"><b>(</b></font>x, s<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> <font color="#ff00ff">EQUAL</font><font color="#804040"><b>)</b></font> xs<font color="#804040"><b>))</b></font> @
+                           sort c <font color="#804040"><b>(</b></font><font color="#a020f0">List</font>.filter <font color="#804040"><b>(fn</b></font> x <font color="#804040"><b>=</b></font>&gt; c<font color="#804040"><b>(</b></font>x, s<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> <font color="#ff00ff">GREATER</font><font color="#804040"><b>)</b></font> xs<font color="#804040"><b>)</b></font>
+
+      <font color="#804040"><b>fun</b></font> rank <font color="#804040"><b>((</b></font><font color="#804040"><b>_</b></font>, rank, queryResult<font color="#804040"><b>)</b></font>, map<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+         <font color="#804040"><b>let</b></font>
+            <font color="#804040"><b>fun</b></font> rank2 <font color="#804040"><b>((</b></font>docid, freq<font color="#804040"><b>)</b></font>, map<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+               <font color="#804040"><b>let</b></font>
+                  <font color="#804040"><b>val</b></font> score <font color="#804040"><b>=</b></font> scoreFn <font color="#804040"><b>{</b></font>freq <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.toInt freq, rank <font color="#804040"><b>=</b></font> rank<font color="#804040"><b>}</b></font>
+               <font color="#804040"><b>in</b></font>
+                  <font color="#804040"><b>case</b></font> <font color="#a020f0">DocIdMap</font>.find <font color="#804040"><b>(</b></font>map, docid<font color="#804040"><b>)</b></font>
+                   <font color="#804040"><b>of</b></font> <font color="#ff00ff">NONE</font> <font color="#804040"><b>=</b></font>&gt; <font color="#a020f0">DocIdMap</font>.insert <font color="#804040"><b>(</b></font>map, docid, ref score<font color="#804040"><b>)</b></font>
+                    <font color="#804040"><b>|</b></font> <font color="#ff00ff">SOME</font><font color="#804040"><b>(</b></font>rank<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>&gt; <font color="#804040"><b>(</b></font>rank <font color="#804040"><b>:=</b></font> <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>rank<font color="#804040"><b>)</b></font> + score<font color="#804040"><b>;</b></font> map<font color="#804040"><b>)</b></font>
+               <font color="#804040"><b>end</b></font>
+         <font color="#804040"><b>in</b></font>
+            <font color="#a020f0">List</font>.foldl rank2 map queryResult
+         <font color="#804040"><b>end</b></font>
+
+     <font color="#804040"><b>val</b></font> rankedMap <font color="#804040"><b>=</b></font> <font color="#a020f0">List</font>.foldl rank map l
+     <font color="#804040"><b>val</b></font> rankedList <font color="#804040"><b>=</b></font> <font color="#a020f0">List</font>.map <font color="#804040"><b>(fn</b></font> <font color="#804040"><b>(</b></font>docid, rank<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>&gt; <font color="#804040"><b>(</b></font>docid, <font color="#804040"><b>!</b></font>rank<font color="#804040"><b>))</b></font> <font color="#804040"><b>(</b></font><font color="#a020f0">DocIdMap</font>.listItemsi rankedMap<font color="#804040"><b>)</b></font> <font color="#0000ff">(* docid, rank *)</font>
+   <font color="#804040"><b>in</b></font>
+      sort <font color="#804040"><b>(fn</b></font> <font color="#804040"><b>((</b></font><font color="#804040"><b>_</b></font>, rank<font color="#804040"><b>)</b></font>, <font color="#804040"><b>(</b></font><font color="#804040"><b>_</b></font>, rank2<font color="#804040"><b>))</b></font> <font color="#804040"><b>=</b></font>&gt; <font color="#a020f0">Int</font>.compare <font color="#804040"><b>(</b></font>rank2, rank<font color="#804040"><b>))</b></font> rankedList
+   <font color="#804040"><b>end</b></font>
+
+<font color="#804040"><b>fun</b></font> outputQuery l outputFn <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> wordToString <font color="#804040"><b>=</b></font> <font color="#a020f0">Int</font>.toString o <font color="#a020f0">Word</font>.toInt
+      <font color="#804040"><b>val</b></font> intToString <font color="#804040"><b>=</b></font> <font color="#a020f0">Int</font>.toString
+
+      <font color="#0000ff">(* docid rank/score *)</font>
+      <font color="#804040"><b>fun</b></font> output <font color="#804040"><b>(</b></font>docid, rank<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> outputFn <font color="#804040"><b>(</b></font>wordToString docid <font color="#804040"><b>^</b></font> <font color="#ff00ff">&quot; &quot;</font> <font color="#804040"><b>^</b></font> intToString rank <font color="#804040"><b>^</b></font> <font color="#ff00ff">&quot;\n&quot;</font><font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>in</b></font>
+      <font color="#a020f0">List</font>.app output l
+   <font color="#804040"><b>end</b></font>
+
+<font color="#804040"><b>fun</b></font> query <font color="#804040"><b>{</b></font>strm, charTable, stopwordTable, outputFn, file, hash, scoreFn<font color="#804040"><b>}</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> l <font color="#804040"><b>=</b></font> analyseQuery <font color="#804040"><b>{</b></font>strm <font color="#804040"><b>=</b></font> strm,
+                            charTable <font color="#804040"><b>=</b></font> charTable,
+                            stopwordTable <font color="#804040"><b>=</b></font> stopwordTable,
+                            outputFn <font color="#804040"><b>=</b></font> outputFn<font color="#804040"><b>}</b></font>
+
+      <font color="#804040"><b>val</b></font> l <font color="#804040"><b>=</b></font> doQuery <font color="#804040"><b>(</b></font>l, file, hash<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>val</b></font> l <font color="#804040"><b>=</b></font> rankQuery l scoreFn
+   <font color="#804040"><b>in</b></font>
+      l
+   <font color="#804040"><b>end</b></font>
+
+<font color="#a020f0">end</font>
+
+<font color="#0000ff">(* TEST *)</font>
+<font color="#0000ff">(*</font>
+<font color="#0000ff">val q = RankedQuery.query {strm = TextIO.stdIn, </font>
+<font color="#0000ff">                           charTable = Tokenizer.CharTableTransform.German,</font>
+<font color="#0000ff">                           stopwordTable = SimpleAnalyser.TS.mkTableFromFile &quot;../filter/stopWords.en&quot;, </font>
+<font color="#0000ff">                           outputFn = (fn s =&gt; TextIO.output (TextIO.stdErr, s)),</font>
+<font color="#0000ff">                           file = &quot;test.index&quot;,</font>
+<font color="#0000ff">                           hash = Hashing.sdbmHash,</font>
+<font color="#0000ff">                           scoreFn = (fn {freq, rank} =&gt; freq * rank) }</font>
+
+<font color="#0000ff">val _ = RankedQuery.outputQuery q print </font>
+<font color="#0000ff">*)</font>
+</pre>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<html>
+<head>
+<title>guugelhupf\src\gh\ds\hash-table.sml</title>
+<meta name="Generator" content="Vim/6.0">
+</head>
+<body bgcolor="#ffffff" text="#000000">
+<pre>
+<font color="#0000ff">(* </font>
+<font color="#0000ff"> * Copyright (c) 2002 Michael Neumann &lt;neumann@s-direktnet.de&gt; </font>
+<font color="#0000ff"> * </font>
+<font color="#0000ff"> * Many ideas from MLtons and John Reppys (SML/NJ) HashTable structure. </font>
+<font color="#0000ff"> *)</font>
+
+<font color="#804040"><b>structure</b></font><font color="#a020f0"> HashTable</font> <font color="#804040"><b>=</b></font>
+<font color="#a020f0">struct</font>
+
+<font color="#804040"><b>datatype</b></font> <font color="#804040"><b>(</b></font>'a, 'b<font color="#804040"><b>)</b></font> t <font color="#804040"><b>=</b></font>
+   <font color="#ff00ff">HT</font> <font color="#804040"><b>of</b></font> <font color="#804040"><b>{</b></font>buckets: <font color="#804040"><b>(</b></font>word <font color="#804040"><b>*</b></font> 'a <font color="#804040"><b>*</b></font> 'b<font color="#804040"><b>)</b></font> <font color="#2e8b57"><b>list</b></font> array ref,
+          equals: 'a <font color="#804040"><b>*</b></font> 'a -&gt; <font color="#2e8b57"><b>bool</b></font>,
+          hash: 'a -&gt; word,
+          mask: word ref,
+          notFound : <font color="#2e8b57"><b>exn</b></font>,
+          numItems: <font color="#2e8b57"><b>int</b></font> ref<font color="#804040"><b>}</b></font>
+
+<font color="#804040"><b>fun</b></font> <font color="#804040"><b>(</b></font>'a, 'b<font color="#804040"><b>)</b></font> newWithBuckets <font color="#804040"><b>{</b></font>equals, hash, notFound, numBuckets<font color="#804040"><b>}</b></font>: <font color="#804040"><b>(</b></font>'a, 'b<font color="#804040"><b>)</b></font> t <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> mask: word <font color="#804040"><b>=</b></font> numBuckets - 0w1
+   <font color="#804040"><b>in</b></font>
+      <font color="#ff00ff">HT</font> <font color="#804040"><b>{</b></font>buckets <font color="#804040"><b>=</b></font> ref <font color="#804040"><b>(</b></font><font color="#a020f0">Array</font>.new <font color="#804040"><b>(</b></font><font color="#a020f0">Word</font>.toInt numBuckets, <font color="#ff00ff">[]</font><font color="#804040"><b>))</b></font>,
+          equals <font color="#804040"><b>=</b></font> equals,
+          hash <font color="#804040"><b>=</b></font> hash,
+          mask <font color="#804040"><b>=</b></font> ref mask,
+          notFound <font color="#804040"><b>=</b></font> notFound,
+          numItems <font color="#804040"><b>=</b></font> ref <font color="#ff00ff">0</font><font color="#804040"><b>}</b></font>
+   <font color="#804040"><b>end</b></font>
+
+<font color="#804040"><b>fun</b></font> new <font color="#804040"><b>{</b></font>equals, hash, notFound, size<font color="#804040"><b>}</b></font> <font color="#804040"><b>=</b></font>
+   newWithBuckets
+   <font color="#804040"><b>{</b></font>equals <font color="#804040"><b>=</b></font> equals,
+    hash <font color="#804040"><b>=</b></font> hash,
+    notFound <font color="#804040"><b>=</b></font> notFound,
+    numBuckets <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.max <font color="#804040"><b>(</b></font>0w64, <font color="#a020f0">Word</font>.roundUpToPowerOfTwo <font color="#804040"><b>(</b></font><font color="#a020f0">Word</font>.fromInt size<font color="#804040"><b>))}</b></font>
+
+<font color="#0000ff">(* Return number of key/value pairs in table *)</font>
+<font color="#804040"><b>fun</b></font> size <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font> <font color="#804040"><b>{</b></font>numItems, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>!</b></font>numItems
+
+<font color="#804040"><b>fun</b></font> numBuckets <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font> <font color="#804040"><b>{</b></font>buckets, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font> <font color="#a020f0">Array</font>.length <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets<font color="#804040"><b>)</b></font>
+
+<font color="#804040"><b>fun</b></font> getBuckets <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font> <font color="#804040"><b>{</b></font>buckets, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets<font color="#804040"><b>)</b></font>
+
+<font color="#804040"><b>fun</b></font> index <font color="#804040"><b>(</b></font>w: word, mask: word<font color="#804040"><b>)</b></font>: <font color="#2e8b57"><b>int</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#a020f0">Word</font>.toInt <font color="#804040"><b>(</b></font><font color="#a020f0">Word</font>.andb <font color="#804040"><b>(</b></font>w, mask<font color="#804040"><b>))</b></font>
+
+<font color="#0000ff">(* Remove all keys for which function p returns true *)</font>
+<font color="#804040"><b>fun</b></font> removeAll <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font> <font color="#804040"><b>{</b></font>buckets, numItems, ...<font color="#804040"><b>}</b></font>, p<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>fun</b></font> f <font color="#804040"><b>(</b></font>a, ac<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>if</b></font> p a <font color="#804040"><b>then</b></font> <font color="#804040"><b>(</b></font><font color="#a020f0">Int</font>.dec numItems<font color="#804040"><b>;</b></font> ac<font color="#804040"><b>)</b></font>
+                             <font color="#804040"><b>else</b></font> a <font color="#804040"><b>::</b></font> ac
+      <font color="#804040"><b>fun</b></font> g elts <font color="#804040"><b>=</b></font> <font color="#a020f0">List</font>.foldr f <font color="#ff00ff">[]</font> elts
+   <font color="#804040"><b>in</b></font>
+      <font color="#a020f0">Array</font>.modify g <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>end</b></font>
+
+<font color="#0000ff">(* Remove all elements from the table *)</font>
+<font color="#804040"><b>fun</b></font> clear <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font> <font color="#804040"><b>{</b></font>buckets, numItems, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+   <font color="#804040"><b>in</b></font>
+      numItems <font color="#804040"><b>:=</b></font> <font color="#ff00ff">0</font><font color="#804040"><b>;</b></font>
+      <font color="#a020f0">Array</font>.modify <font color="#804040"><b>(fn</b></font> <font color="#804040"><b>_</b></font> <font color="#804040"><b>=</b></font>&gt; <font color="#ff00ff">[]</font><font color="#804040"><b>)</b></font> <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>end</b></font>
+
+<font color="#0000ff">(* Insert an item.  If the key already has an item associated with it,</font>
+<font color="#0000ff"> * then the old item is discarded.</font>
+<font color="#0000ff"> *)</font>
+<font color="#804040"><b>fun</b></font> insert <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font><font color="#804040"><b>{</b></font>buckets, equals, hash, mask, numItems, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>(</b></font>key, item<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> hv <font color="#804040"><b>=</b></font> hash key
+      <font color="#804040"><b>val</b></font> ix <font color="#804040"><b>=</b></font> index <font color="#804040"><b>(</b></font>hv, <font color="#804040"><b>!</b></font>mask<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>val</b></font> bucket <font color="#804040"><b>=</b></font> <font color="#a020f0">Array</font>.sub <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets, ix<font color="#804040"><b>)</b></font>
+
+      <font color="#804040"><b>fun</b></font> ins <font color="#ff00ff">[]</font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font><font color="#a020f0">Int</font>.inc numItems<font color="#804040"><b>;</b></font> <font color="#804040"><b>[(</b></font>hv, key, item<font color="#804040"><b>)])</b></font> <font color="#0000ff">(* new key *)</font>
+        <font color="#804040"><b>|</b></font> ins <font color="#804040"><b>((</b></font>t as <font color="#804040"><b>(</b></font>h, k, i<font color="#804040"><b>))</b></font> <font color="#804040"><b>::</b></font> xs<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+             <font color="#804040"><b>if</b></font> hv <font color="#804040"><b>=</b></font> h <font color="#804040"><b>andalso</b></font> equals <font color="#804040"><b>(</b></font>key, k<font color="#804040"><b>)</b></font> <font color="#0000ff">(* key exists -&gt; overwrite *)</font>
+                <font color="#804040"><b>then</b></font> <font color="#804040"><b>(</b></font>hv, key, item<font color="#804040"><b>)</b></font> <font color="#804040"><b>::</b></font> xs
+             <font color="#804040"><b>else</b></font>
+                t <font color="#804040"><b>::</b></font> <font color="#804040"><b>(</b></font>ins xs<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>in</b></font>
+     <font color="#a020f0">Array</font>.update <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets, ix, ins bucket<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>end</b></font>
+
+<font color="#0000ff">(* Insert an item if key not in table. *)</font>
+<font color="#804040"><b>fun</b></font> insertIfNew <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font><font color="#804040"><b>{</b></font>buckets, equals, hash, mask, numItems, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>(</b></font>key, item<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> hv <font color="#804040"><b>=</b></font> hash key
+      <font color="#804040"><b>val</b></font> ix <font color="#804040"><b>=</b></font> index <font color="#804040"><b>(</b></font>hv, <font color="#804040"><b>!</b></font>mask<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>val</b></font> bucket <font color="#804040"><b>=</b></font> <font color="#a020f0">Array</font>.sub <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets, ix<font color="#804040"><b>)</b></font>
+
+      <font color="#804040"><b>fun</b></font> ins <font color="#ff00ff">[]</font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font><font color="#a020f0">Int</font>.inc numItems<font color="#804040"><b>;</b></font> <font color="#804040"><b>[(</b></font>hv, key, item<font color="#804040"><b>)])</b></font> <font color="#0000ff">(* new key *)</font>
+        <font color="#804040"><b>|</b></font> ins <font color="#804040"><b>(</b></font>lst as <font color="#804040"><b>((</b></font>t as <font color="#804040"><b>(</b></font>h, k, i<font color="#804040"><b>))</b></font> <font color="#804040"><b>::</b></font> xs<font color="#804040"><b>))</b></font> <font color="#804040"><b>=</b></font>
+             <font color="#804040"><b>if</b></font> hv <font color="#804040"><b>=</b></font> h <font color="#804040"><b>andalso</b></font> equals <font color="#804040"><b>(</b></font>key, k<font color="#804040"><b>)</b></font> <font color="#0000ff">(* key exists -&gt; exit *)</font>
+                <font color="#804040"><b>then</b></font> lst
+             <font color="#804040"><b>else</b></font>
+                t <font color="#804040"><b>::</b></font> <font color="#804040"><b>(</b></font>ins xs<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>in</b></font>
+     <font color="#a020f0">Array</font>.update <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets, ix, ins bucket<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>end</b></font>
+
+<font color="#0000ff">(* check whether key exits *)</font>
+<font color="#804040"><b>fun</b></font> inDomain <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font><font color="#804040"><b>{</b></font>buckets, equals, hash, mask, ...<font color="#804040"><b>})</b></font> key <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> hv <font color="#804040"><b>=</b></font> hash key
+      <font color="#804040"><b>val</b></font> ix <font color="#804040"><b>=</b></font> index <font color="#804040"><b>(</b></font>hv, <font color="#804040"><b>!</b></font>mask<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>val</b></font> bucket <font color="#804040"><b>=</b></font> <font color="#a020f0">Array</font>.sub <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets, ix<font color="#804040"><b>)</b></font>
+
+      <font color="#804040"><b>fun</b></font> find <font color="#ff00ff">[]</font> <font color="#804040"><b>=</b></font> <font color="#ff00ff">false</font> <font color="#0000ff">(* key does not exist *)</font>
+        <font color="#804040"><b>|</b></font> find <font color="#804040"><b>(</b></font> <font color="#804040"><b>(</b></font>h, k, <font color="#804040"><b>_</b></font><font color="#804040"><b>)</b></font> <font color="#804040"><b>::</b></font> xs <font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+             <font color="#804040"><b>if</b></font> hv <font color="#804040"><b>=</b></font> h <font color="#804040"><b>andalso</b></font> equals <font color="#804040"><b>(</b></font>key, k<font color="#804040"><b>)</b></font> <font color="#0000ff">(* key exists *)</font>
+                <font color="#804040"><b>then</b></font> <font color="#ff00ff">true</font>
+             <font color="#804040"><b>else</b></font>
+                find xs
+   <font color="#804040"><b>in</b></font>
+      find bucket
+   <font color="#804040"><b>end</b></font>
+
+<font color="#0000ff">(* synonym for inDomain *)</font>
+<font color="#804040"><b>val</b></font> hasKey <font color="#804040"><b>=</b></font> inDomain
+
+
+<font color="#0000ff">(* If item does not exist, insert it into table. Otherwise just return the value. *)</font>
+<font color="#804040"><b>fun</b></font> lookupOrInsert <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font><font color="#804040"><b>{</b></font>buckets, equals, hash, mask, numItems, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>(</b></font>key, item<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> hv <font color="#804040"><b>=</b></font> hash key
+      <font color="#804040"><b>val</b></font> ix <font color="#804040"><b>=</b></font> index <font color="#804040"><b>(</b></font>hv, <font color="#804040"><b>!</b></font>mask<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>val</b></font> bucket <font color="#804040"><b>=</b></font> <font color="#a020f0">Array</font>.sub <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets, ix<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>fun</b></font> upd b <font color="#804040"><b>=</b></font> <font color="#a020f0">Array</font>.update <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets, ix, b<font color="#804040"><b>)</b></font>
+
+      <font color="#804040"><b>fun</b></font> loi <font color="#ff00ff">[]</font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font><font color="#a020f0">Int</font>.inc numItems<font color="#804040"><b>;</b></font> upd <font color="#804040"><b>[(</b></font>hv, key, item<font color="#804040"><b>)]</b></font><font color="#804040"><b>;</b></font> item<font color="#804040"><b>)</b></font> <font color="#0000ff">(* key not found -&gt; insert *)</font>
+        <font color="#804040"><b>|</b></font> loi <font color="#804040"><b>((</b></font>h, k, i<font color="#804040"><b>)</b></font> <font color="#804040"><b>::</b></font> xs<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+             <font color="#804040"><b>if</b></font> hv <font color="#804040"><b>=</b></font> h <font color="#804040"><b>andalso</b></font> equals <font color="#804040"><b>(</b></font>key, k<font color="#804040"><b>)</b></font> <font color="#0000ff">(* key found -&gt; return value *)</font>
+                <font color="#804040"><b>then</b></font> i
+             <font color="#804040"><b>else</b></font>
+                loi xs
+   <font color="#804040"><b>in</b></font>
+     loi bucket
+   <font color="#804040"><b>end</b></font>
+
+
+<font color="#0000ff">(* look for an item, return NONE if the item doesn't exist *)</font>
+<font color="#804040"><b>fun</b></font> find <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font><font color="#804040"><b>{</b></font>buckets, equals, hash, mask, ...<font color="#804040"><b>})</b></font> key <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> hv <font color="#804040"><b>=</b></font> hash key
+      <font color="#804040"><b>val</b></font> ix <font color="#804040"><b>=</b></font> index <font color="#804040"><b>(</b></font>hv, <font color="#804040"><b>!</b></font>mask<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>val</b></font> bucket <font color="#804040"><b>=</b></font> <font color="#a020f0">Array</font>.sub <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets, ix<font color="#804040"><b>)</b></font>
+
+      <font color="#804040"><b>fun</b></font> find <font color="#ff00ff">[]</font> <font color="#804040"><b>=</b></font> <font color="#ff00ff">NONE</font> <font color="#0000ff">(* key does not exist *)</font>
+        <font color="#804040"><b>|</b></font> find <font color="#804040"><b>(</b></font> <font color="#804040"><b>(</b></font>h, k, i<font color="#804040"><b>)</b></font> <font color="#804040"><b>::</b></font> xs <font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+             <font color="#804040"><b>if</b></font> hv <font color="#804040"><b>=</b></font> h <font color="#804040"><b>andalso</b></font> equals <font color="#804040"><b>(</b></font>key, k<font color="#804040"><b>)</b></font> <font color="#0000ff">(* key exists *)</font>
+                <font color="#804040"><b>then</b></font> <font color="#ff00ff">SOME</font><font color="#804040"><b>(</b></font>i<font color="#804040"><b>)</b></font>
+             <font color="#804040"><b>else</b></font>
+                find xs
+   <font color="#804040"><b>in</b></font>
+      find bucket
+   <font color="#804040"><b>end</b></font>
+
+<font color="#0000ff">(* find an item, the table's exception is raised if the item doesn't exist *)</font>
+<font color="#804040"><b>fun</b></font> lookup <font color="#804040"><b>(</b></font>tab as <font color="#ff00ff">HT</font><font color="#804040"><b>{</b></font>buckets, equals, hash, mask, notFound, ...<font color="#804040"><b>})</b></font> key <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+   <font color="#804040"><b>in</b></font>
+      <font color="#804040"><b>case</b></font> find tab key
+       <font color="#804040"><b>of</b></font> <font color="#ff00ff">NONE</font> <font color="#804040"><b>=</b></font>&gt; <font color="#804040"><b>raise</b></font> notFound
+        <font color="#804040"><b>|</b></font> <font color="#ff00ff">SOME</font><font color="#804040"><b>(</b></font>item<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>&gt; item
+   <font color="#804040"><b>end</b></font>
+
+<font color="#0000ff">(* Remove an item.  The table's exception is raised if</font>
+<font color="#0000ff"> * the item doesn't exist.</font>
+<font color="#0000ff"> *)</font>
+<font color="#804040"><b>fun</b></font> remove <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font><font color="#804040"><b>{</b></font>buckets, equals, hash, mask, notFound, ...<font color="#804040"><b>})</b></font> key <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> hv <font color="#804040"><b>=</b></font> hash key
+      <font color="#804040"><b>val</b></font> ix <font color="#804040"><b>=</b></font> index <font color="#804040"><b>(</b></font>hv, <font color="#804040"><b>!</b></font>mask<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>val</b></font> bucket <font color="#804040"><b>=</b></font> <font color="#a020f0">Array</font>.sub <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets, ix<font color="#804040"><b>)</b></font>
+
+      <font color="#804040"><b>fun</b></font> rmv <font color="#ff00ff">[]</font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>raise</b></font> notFound <font color="#0000ff">(* key does not exist *)</font>
+        <font color="#804040"><b>|</b></font> rmv <font color="#804040"><b>((</b></font>t as <font color="#804040"><b>(</b></font>h, k, <font color="#804040"><b>_</b></font><font color="#804040"><b>))</b></font> <font color="#804040"><b>::</b></font> xs<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+             <font color="#804040"><b>if</b></font> hv <font color="#804040"><b>=</b></font> h <font color="#804040"><b>andalso</b></font> equals <font color="#804040"><b>(</b></font>key, k<font color="#804040"><b>)</b></font> <font color="#0000ff">(* key found -&gt; remove *)</font>
+                <font color="#804040"><b>then</b></font> xs
+             <font color="#804040"><b>else</b></font>
+                t <font color="#804040"><b>::</b></font> <font color="#804040"><b>(</b></font>rmv xs<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>in</b></font>
+     <font color="#a020f0">Array</font>.update <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets, ix, rmv bucket<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>end</b></font>
+
+<font color="#804040"><b>fun</b></font> listItems <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font><font color="#804040"><b>{</b></font>buckets, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+     <font color="#804040"><b>fun</b></font> extractItems <font color="#804040"><b>(</b></font>x, xs<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font><font color="#a020f0">List</font>.map <font color="#804040"><b>(fn</b></font> <font color="#804040"><b>(</b></font><font color="#804040"><b>_</b></font>,<font color="#804040"><b>_</b></font>,v<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>&gt; v<font color="#804040"><b>)</b></font> x<font color="#804040"><b>)</b></font> @ xs
+   <font color="#804040"><b>in</b></font>
+      <font color="#a020f0">Array</font>.foldr extractItems <font color="#ff00ff">[]</font> <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>end</b></font>
+
+<font color="#804040"><b>fun</b></font> listItemsi <font color="#804040"><b>(</b></font><font color="#ff00ff">HT</font><font color="#804040"><b>{</b></font>buckets, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font>
+   <font color="#804040"><b>let</b></font>
+     <font color="#804040"><b>fun</b></font> extractItems <font color="#804040"><b>(</b></font>x, xs<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font><font color="#a020f0">List</font>.map <font color="#804040"><b>(fn</b></font> <font color="#804040"><b>(</b></font><font color="#804040"><b>_</b></font>,k,v<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>&gt; <font color="#804040"><b>(</b></font>k,v<font color="#804040"><b>))</b></font> x<font color="#804040"><b>)</b></font> @ xs
+   <font color="#804040"><b>in</b></font>
+      <font color="#a020f0">Array</font>.foldr extractItems <font color="#ff00ff">[]</font> <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>buckets<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>end</b></font>
+
+<font color="#a020f0">end</font>
+
+<font color="#0000ff">(* </font>
+<font color="#0000ff">fun hashString (s:string) = Word.fromInt(String.size s);</font>
+
+<font color="#0000ff">(* TEST *)</font>
+<font color="#0000ff">exception NotFound</font>
+<font color="#0000ff">val ht = HashTable.new {equals = (op =), hash = hashString, size = 128, notFound = NotFound}; </font>
+<font color="#0000ff">val _ = HashTable.insert ht (&quot;hall&quot;, &quot;na dann suepr&quot;);</font>
+<font color="#0000ff">val _ = HashTable.insert ht (&quot;hallo&quot;, &quot;geil&quot;);</font>
+
+<font color="#0000ff">val l = HashTable.lookup ht &quot;hall&quot;;</font>
+<font color="#0000ff">val _ = print (l ^ &quot;\n&quot;);</font>
+<font color="#0000ff">val i = HashTable.size ht ;</font>
+<font color="#0000ff">val s = Int.toString i;</font>
+<font color="#0000ff">val _ = print (s ^ &quot;\n&quot;);</font>
+<font color="#0000ff">*)</font>
+</pre>
+</body>
+</html>

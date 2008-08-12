@@ -1,0 +1,80 @@
+<html>
+<head>
+<title>guugelhupf\src\gh\tokenizer\char-table-transform\mmap\mmap-tokenizer.sml</title>
+<meta name="Generator" content="Vim/6.0">
+</head>
+<body bgcolor="#ffffff" text="#000000">
+<pre>
+<font color="#0000ff">(*</font>
+<font color="#0000ff"> * Copyright (c) 2002 Michael Neumann &lt;neumann@s-direktnet.de&gt;</font>
+<font color="#0000ff"> *)</font>
+
+<font color="#804040"><b>structure</b></font><font color="#a020f0"> MmapTokenizer</font> :&gt;
+  <font color="#a020f0">sig</font>
+    include <font color="#ff00ff">TOKEN_STREAM</font>
+    <font color="#804040"><b>val</b></font> new : <font color="#804040"><b>(</b></font><font color="#2e8b57"><b>string</b></font> <font color="#804040"><b>*</b></font> <font color="#2e8b57"><b>string</b></font><font color="#804040"><b>)</b></font> -&gt; t
+    <font color="#804040"><b>val</b></font> new2 : <font color="#804040"><b>(</b></font><font color="#a020f0">Posix</font>.<font color="#a020f0">IO</font>.file_desc <font color="#804040"><b>*</b></font> <font color="#2e8b57"><b>int</b></font> <font color="#804040"><b>*</b></font> <font color="#2e8b57"><b>string</b></font><font color="#804040"><b>)</b></font> -&gt; t
+    <font color="#804040"><b>val</b></font> free : t -&gt; <font color="#2e8b57"><b>unit</b></font>
+  <font color="#a020f0">end</font> <font color="#804040"><b>=</b></font>
+  <font color="#a020f0">struct</font>
+
+    <font color="#804040"><b>exception</b></font> <font color="#ff00ff">Error</font> <font color="#804040"><b>of</b></font> <font color="#2e8b57"><b>string</b></font>
+
+    <font color="#804040"><b>structure</b></font><font color="#a020f0"> Prim</font> <font color="#804040"><b>=</b></font>
+      <font color="#a020f0">struct</font>
+        <font color="#804040"><b>type</b></font> t <font color="#804040"><b>=</b></font> <font color="#a020f0">Misc</font>.<font color="#a020f0">CStruct</font>.t
+        <font color="#804040"><b>val</b></font> structSize <font color="#804040"><b>=</b></font> _ffi <font color="#ff00ff">&quot;MmapTokenizer_structSize&quot;</font> : <font color="#2e8b57"><b>int</b></font><font color="#804040"><b>;</b></font>
+        <font color="#804040"><b>val</b></font> maxWordLen <font color="#804040"><b>=</b></font> _ffi <font color="#ff00ff">&quot;MmapTokenizer_maxWordLen&quot;</font> : <font color="#2e8b57"><b>int</b></font><font color="#804040"><b>;</b></font>
+        <font color="#804040"><b>val</b></font> init <font color="#804040"><b>=</b></font> _ffi <font color="#ff00ff">&quot;MmapTokenizer_init&quot;</font> : <font color="#804040"><b>(</b></font>t <font color="#804040"><b>*</b></font> word <font color="#804040"><b>*</b></font> <font color="#2e8b57"><b>int</b></font><font color="#804040"><b>)</b></font> -&gt; <font color="#2e8b57"><b>bool</b></font><font color="#804040"><b>;</b></font>
+        <font color="#804040"><b>val</b></font> free <font color="#804040"><b>=</b></font> _ffi <font color="#ff00ff">&quot;MmapTokenizer_free&quot;</font> : t -&gt; <font color="#2e8b57"><b>unit</b></font><font color="#804040"><b>;</b></font>
+        <font color="#804040"><b>val</b></font> nextToken <font color="#804040"><b>=</b></font> _ffi <font color="#ff00ff">&quot;MmapTokenizer_nextToken&quot;</font> :
+               <font color="#804040"><b>(</b></font>t <font color="#804040"><b>*</b></font> <font color="#2e8b57"><b>string</b></font> <font color="#0000ff">(* ct *)</font> <font color="#804040"><b>*</b></font> <font color="#a020f0">CharArray</font>.array <font color="#0000ff">(* buf *)</font><font color="#804040"><b>)</b></font> -&gt; <font color="#2e8b57"><b>int</b></font><font color="#804040"><b>;</b></font>
+      <font color="#a020f0">end</font> <font color="#0000ff">(* Prim *)</font>
+
+    <font color="#804040"><b>datatype</b></font> t <font color="#804040"><b>=</b></font> <font color="#ff00ff">T</font> <font color="#804040"><b>of</b></font> <font color="#804040"><b>{</b></font>prim: <font color="#a020f0">Prim</font>.t, fd : <font color="#a020f0">Posix</font>.<font color="#a020f0">IO</font>.file_desc,
+                       charTable: <font color="#2e8b57"><b>string</b></font>, buf: <font color="#a020f0">CharArray</font>.array,
+                       wordPos: word ref<font color="#804040"><b>}</b></font>
+
+    <font color="#804040"><b>fun</b></font> new2 <font color="#804040"><b>(</b></font>fd : <font color="#a020f0">Posix</font>.<font color="#a020f0">IO</font>.file_desc, len : <font color="#2e8b57"><b>int</b></font>, ct : <font color="#2e8b57"><b>string</b></font><font color="#804040"><b>)</b></font> : t <font color="#804040"><b>=</b></font> <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> s <font color="#804040"><b>=</b></font> <font color="#a020f0">Misc</font>.<font color="#a020f0">CStruct</font>.new <font color="#a020f0">Prim</font>.structSize
+      <font color="#804040"><b>val</b></font> b <font color="#804040"><b>=</b></font> <font color="#a020f0">CharArray</font>.array <font color="#804040"><b>(</b></font><font color="#a020f0">Prim</font>.maxWordLen, <font color="#ff00ff">#&quot;\000&quot;</font><font color="#804040"><b>)</b></font>
+    <font color="#804040"><b>in</b></font>
+      <font color="#804040"><b>if</b></font> <font color="#804040"><b>(</b></font><font color="#a020f0">String</font>.size ct<font color="#804040"><b>)</b></font> &lt;&gt; <font color="#ff00ff">256</font>
+      <font color="#804040"><b>then</b></font> <font color="#804040"><b>raise</b></font> <font color="#ff00ff">Error</font><font color="#804040"><b>(</b></font><font color="#ff00ff">&quot;charTable is of wrong size (should be 256)&quot;</font><font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>else</b></font> <font color="#ff00ff">()</font><font color="#804040"><b>;</b></font>
+
+      <font color="#804040"><b>if</b></font> <font color="#a020f0">Prim</font>.init <font color="#804040"><b>(</b></font>s, <font color="#a020f0">Posix</font>.<font color="#a020f0">FileSys</font>.fdToWord fd, len<font color="#804040"><b>)</b></font> <font color="#804040"><b>then</b></font>
+        <font color="#ff00ff">T</font> <font color="#804040"><b>{</b></font>prim <font color="#804040"><b>=</b></font> s, fd <font color="#804040"><b>=</b></font> fd, charTable <font color="#804040"><b>=</b></font> ct, buf <font color="#804040"><b>=</b></font> b, wordPos <font color="#804040"><b>=</b></font> ref 0w0<font color="#804040"><b>}</b></font>
+      <font color="#804040"><b>else</b></font>
+        <font color="#804040"><b>raise</b></font> <font color="#ff00ff">Error</font><font color="#804040"><b>(</b></font><font color="#ff00ff">&quot;Failed to memory map file&quot;</font><font color="#804040"><b>)</b></font>
+    <font color="#804040"><b>end</b></font>
+
+    <font color="#804040"><b>fun</b></font> new <font color="#804040"><b>(</b></font>fileName : <font color="#2e8b57"><b>string</b></font>, ct : <font color="#2e8b57"><b>string</b></font><font color="#804040"><b>)</b></font> : t <font color="#804040"><b>=</b></font> <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>open</b></font> <font color="#a020f0">Posix.FileSys</font>
+      <font color="#804040"><b>val</b></font> fd <font color="#804040"><b>=</b></font> openf <font color="#804040"><b>(</b></font>fileName, <font color="#ff00ff">O_RDONLY</font>, 0w0<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>val</b></font> sz <font color="#804040"><b>=</b></font> <font color="#a020f0">ST</font>.size <font color="#804040"><b>(</b></font>stat fileName<font color="#804040"><b>)</b></font>
+    <font color="#804040"><b>in</b></font>
+      new2 <font color="#804040"><b>(</b></font>fd, sz, ct<font color="#804040"><b>)</b></font>
+    <font color="#804040"><b>end</b></font>
+
+    <font color="#804040"><b>fun</b></font> free <font color="#804040"><b>(</b></font><font color="#ff00ff">T</font> <font color="#804040"><b>{</b></font>prim <font color="#804040"><b>=</b></font> s, fd, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font><font color="#a020f0">Prim</font>.free s<font color="#804040"><b>;</b></font> <font color="#a020f0">Posix</font>.<font color="#a020f0">IO</font>.close fd<font color="#804040"><b>)</b></font>
+
+    <font color="#804040"><b>fun</b></font> nextToken <font color="#804040"><b>(</b></font><font color="#ff00ff">T</font> <font color="#804040"><b>{</b></font>prim <font color="#804040"><b>=</b></font> s, charTable <font color="#804040"><b>=</b></font> ct, buf <font color="#804040"><b>=</b></font> b, wordPos, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font> <font color="#804040"><b>let</b></font>
+      <font color="#804040"><b>val</b></font> sz <font color="#804040"><b>=</b></font> <font color="#a020f0">Prim</font>.nextToken <font color="#804040"><b>(</b></font>s, ct, b<font color="#804040"><b>)</b></font>
+    <font color="#804040"><b>in</b></font>
+      <font color="#804040"><b>if</b></font> sz <font color="#804040"><b>=</b></font> <font color="#ff00ff">0</font> <font color="#804040"><b>then</b></font>
+        <font color="#ff00ff">NONE</font>
+      <font color="#804040"><b>else</b></font>
+        <font color="#ff00ff">SOME</font> <font color="#804040"><b>(</b></font><font color="#ff00ff">Token</font> <font color="#804040"><b>{</b></font>term <font color="#804040"><b>=</b></font> <font color="#a020f0">CharArray</font>.extract <font color="#804040"><b>(</b></font>b, <font color="#ff00ff">0</font>, <font color="#ff00ff">SOME</font> <font color="#804040"><b>(</b></font>sz<font color="#804040"><b>))</b></font>,
+                     position <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.inc wordPos,
+                     kind <font color="#804040"><b>=</b></font> <font color="#ff00ff">NONE</font> <font color="#804040"><b>})</b></font>
+    <font color="#804040"><b>end</b></font>
+
+    <font color="#804040"><b>val</b></font> map <font color="#804040"><b>=</b></font> <font color="#a020f0">TokenStream0</font>.map nextToken
+    <font color="#804040"><b>val</b></font> app <font color="#804040"><b>=</b></font> <font color="#a020f0">TokenStream0</font>.app nextToken
+    <font color="#804040"><b>val</b></font> toList <font color="#804040"><b>=</b></font> <font color="#a020f0">TokenStream0</font>.toList nextToken
+  <font color="#a020f0">end</font>
+
+</pre>
+</body>
+</html>

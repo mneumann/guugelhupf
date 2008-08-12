@@ -1,0 +1,179 @@
+<html>
+<head>
+<title>guugelhupf\src\compilation-manager\CM.rb</title>
+<meta name="Generator" content="Vim/6.0">
+</head>
+<body bgcolor="#ffffff" text="#000000">
+<pre>
+<font color="#a020f0">#!/usr/bin/env ruby</font>
+<font color="#0000ff">#</font>
+<font color="#0000ff"># A simple compilation manager for MLton, which supports Groups, </font>
+<font color="#0000ff"># Packages, Objectfiles and arbitrary commands.</font>
+<font color="#0000ff">#</font>
+<font color="#0000ff"># Copyright (c) 2001, 2002 Michael Neumann &lt;neumann@s-direktnet.de&gt;</font>
+<font color="#0000ff"># </font>
+<font color="#0000ff"># All rights reserved.</font>
+<font color="#0000ff">#</font>
+<font color="#0000ff"># Redistribution and use in source and binary forms, with or without </font>
+<font color="#0000ff"># modification, are permitted provided that the following conditions </font>
+<font color="#0000ff"># are met:</font>
+<font color="#0000ff"># 1. Redistributions of source code must retain the above copyright </font>
+<font color="#0000ff">#    notice, this list of conditions and the following disclaimer.</font>
+<font color="#0000ff"># 2. Redistributions in binary form must reproduce the above copyright </font>
+<font color="#0000ff">#    notice, this list of conditions and the following disclaimer in the </font>
+<font color="#0000ff">#    documentation and/or other materials provided with the distribution.</font>
+<font color="#0000ff"># 3. The name of the author may not be used to endorse or promote products</font>
+<font color="#0000ff">#    derived from this software without specific prior written permission.</font>
+<font color="#0000ff">#</font>
+<font color="#0000ff"># THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,</font>
+<font color="#0000ff"># INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY</font>
+<font color="#0000ff"># AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL</font>
+<font color="#0000ff"># THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,</font>
+<font color="#0000ff"># EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,</font>
+<font color="#0000ff"># PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;</font>
+<font color="#0000ff"># OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,</font>
+<font color="#0000ff"># WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR</font>
+<font color="#0000ff"># OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF</font>
+<font color="#0000ff"># ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</font>
+<font color="#0000ff">#</font>
+
+
+<font color="#a020f0">class </font><font color="#2e8b57"><b>Source</b></font>
+  attr_reader<font color="#6a5acd"> :path</font>
+<font color="#a020f0">  def </font><font color="#008080">initialize</font>(path, dir=<font color="#ff00ff">nil</font>)
+<font color="#804040"><b>    if</b></font> path.strip[<font color="#ff00ff">0</font>,<font color="#ff00ff">1</font>] == <font color="#6a5acd">'</font><font color="#ff00ff">!</font><font color="#6a5acd">'</font> <font color="#804040"><b>then</b></font>
+      <font color="#6a5acd">@command</font> = path.strip[<font color="#ff00ff">1</font>..-<font color="#ff00ff">1</font>].strip
+      <font color="#6a5acd">@dir</font> = dir || <font color="#6a5acd">Dir</font>.pwd
+
+      <font color="#0000ff"># execute command</font>
+      print <font color="#6a5acd">@command</font>, <font color="#6a5acd">&quot;</font><font color="#ff00ff"> (</font><font color="#6a5acd">#{@dir}</font><font color="#ff00ff">)</font><font color="#6a5acd">\n</font><font color="#6a5acd">&quot;</font>
+      cur_dir = <font color="#6a5acd">Dir</font>.pwd
+      <font color="#6a5acd">Dir</font>.chdir(<font color="#6a5acd">@dir</font>)
+      print <font color="#6a5acd">`</font><font color="#6a5acd">#{@command}</font><font color="#6a5acd">`</font>
+      <font color="#6a5acd">Dir</font>.chdir(cur_dir)
+
+    <font color="#804040"><b>else</b></font>
+<font color="#804040"><b>      if</b></font> path[<font color="#ff00ff">0</font>,<font color="#ff00ff">1</font>] == <font color="#6a5acd">&quot;</font><font color="#ff00ff">/</font><font color="#6a5acd">&quot;</font> <font color="#804040"><b>or</b></font> dir.<font color="#ff00ff">nil</font>?
+        <font color="#6a5acd">@path</font> = path
+      <font color="#804040"><b>else</b></font>
+        <font color="#6a5acd">@path</font> = <font color="#6a5acd">File</font>.join(dir, path)
+      <font color="#804040"><b>end</b></font>
+
+      <font color="#804040"><b>raise</b></font> <font color="#6a5acd">&quot;</font><font color="#ff00ff">File &lt;</font><font color="#6a5acd">#@path</font><font color="#ff00ff">&gt; do not exists!</font><font color="#6a5acd">&quot;</font> <font color="#804040"><b>unless</b></font> <font color="#6a5acd">File</font>.exists? <font color="#6a5acd">@path</font>
+    <font color="#804040"><b>end</b></font>
+  <font color="#a020f0">end</font>
+
+<font color="#a020f0">  def </font><font color="#008080">kind</font>
+<font color="#804040"><b>    if</b></font> <font color="#6a5acd">@command</font> <font color="#804040"><b>then</b></font>
+     <font color="#6a5acd"> :COMMAND</font>
+    <font color="#804040"><b>else</b></font>
+      name = <font color="#6a5acd">File</font>.basename <font color="#6a5acd">@path</font>
+      suffix = name.split(<font color="#6a5acd">&quot;</font><font color="#ff00ff">.</font><font color="#6a5acd">&quot;</font>).last
+      <font color="#804040"><b>case</b></font> suffix.downcase
+      <font color="#804040"><b>when</b></font> <font color="#6a5acd">'</font><font color="#ff00ff">sml</font><font color="#6a5acd">'</font>, <font color="#6a5acd">'</font><font color="#ff00ff">sig</font><font color="#6a5acd">'</font>, <font color="#6a5acd">'</font><font color="#ff00ff">fun</font><font color="#6a5acd">'</font>
+       <font color="#6a5acd"> :SML</font>
+      <font color="#804040"><b>when</b></font> <font color="#6a5acd">'</font><font color="#ff00ff">cm</font><font color="#6a5acd">'</font>
+       <font color="#6a5acd"> :CM</font>
+      <font color="#804040"><b>when</b></font> <font color="#6a5acd">'</font><font color="#ff00ff">o</font><font color="#6a5acd">'</font>
+       <font color="#6a5acd"> :OBJ</font>
+      <font color="#804040"><b>else</b></font>
+        <font color="#804040"><b>raise</b></font> <font color="#6a5acd">&quot;</font><font color="#ff00ff">unknown file type</font><font color="#6a5acd">&quot;</font>
+      <font color="#804040"><b>end</b></font>
+    <font color="#804040"><b>end</b></font>
+  <font color="#a020f0">end</font>
+
+<font color="#a020f0">  def </font><font color="#008080">content</font>(object_files = [])
+    <font color="#804040"><b>case</b></font> <font color="#ff00ff">self</font>.kind
+    <font color="#804040"><b>when</b></font><font color="#6a5acd"> :SML</font>
+      <font color="#6a5acd">File</font>.readlines(<font color="#6a5acd">@path</font>).to_s
+    <font color="#804040"><b>when</b></font><font color="#6a5acd"> :CM</font>
+      <font color="#6a5acd">CM</font>.new(<font color="#6a5acd">@path</font>).content(object_files)
+    <font color="#804040"><b>when</b></font><font color="#6a5acd"> :COMMAND</font>
+      <font color="#0000ff"># do nothing</font>
+    <font color="#804040"><b>else</b></font>
+      <font color="#804040"><b>raise</b></font> <font color="#6a5acd">&quot;</font><font color="#ff00ff">file type does not support content</font><font color="#6a5acd">&quot;</font>
+    <font color="#804040"><b>end</b></font>
+  <font color="#a020f0">end</font>
+<font color="#a020f0">end</font>
+
+<font color="#a020f0">class </font><font color="#2e8b57"><b>CM</b></font>
+  attr_reader<font color="#6a5acd"> :kind</font>,<font color="#6a5acd"> :package</font>,<font color="#6a5acd"> :sources</font>,<font color="#6a5acd"> :path</font>
+
+<font color="#a020f0">  def </font><font color="#008080">initialize</font>(path)
+    <font color="#6a5acd">@path</font> = path
+    <font color="#6a5acd">@dir</font> = <font color="#6a5acd">File</font>.split(<font color="#6a5acd">@path</font>).first
+    <font color="#6a5acd">@lines</font> = <font color="#6a5acd">File</font>.readlines(<font color="#6a5acd">@path</font>).collect{<font color="#6a5acd">|l|</font> l.strip}.select{<font color="#6a5acd">|l|</font>
+      <font color="#804040"><b>not</b></font> (l.empty? <font color="#804040"><b>or</b></font> l[<font color="#ff00ff">0</font>,<font color="#ff00ff">1</font>] == <font color="#6a5acd">'</font><font color="#ff00ff">#</font><font color="#6a5acd">'</font>)
+    }
+    parse
+  <font color="#a020f0">end</font>
+
+<font color="#a020f0">  def </font><font color="#008080">content</font>(object_files = [])
+    content = <font color="#6a5acd">&quot;&quot;</font>
+
+<font color="#804040"><b>    if</b></font> <font color="#6a5acd">@kind</font> ==<font color="#6a5acd"> :PACKAGE</font>
+      content &lt;&lt; <font color="#6a5acd">&quot;</font><font color="#ff00ff">structure </font><font color="#6a5acd">#{ @package }</font><font color="#ff00ff"> = struct</font><font color="#6a5acd">\n</font><font color="#6a5acd">&quot;</font>
+    <font color="#804040"><b>end</b></font>
+
+    <font color="#6a5acd">@sources</font>.each {<font color="#6a5acd">|src|</font>
+<font color="#804040"><b>      if</b></font> src.kind ==<font color="#6a5acd"> :OBJ</font> <font color="#804040"><b>then</b></font>
+        object_files &lt;&lt; src.path
+      <font color="#804040"><b>elsif</b></font> src.kind ==<font color="#6a5acd"> :COMMAND</font>
+        <font color="#0000ff"># do nothing</font>
+      <font color="#804040"><b>else</b></font>
+        content &lt;&lt; src.content(object_files)
+      <font color="#804040"><b>end</b></font>
+    }
+
+<font color="#804040"><b>    if</b></font> <font color="#6a5acd">@kind</font> ==<font color="#6a5acd"> :PACKAGE</font>
+      content &lt;&lt; <font color="#6a5acd">&quot;</font><font color="#ff00ff">end;</font><font color="#6a5acd">\n</font><font color="#6a5acd">&quot;</font>
+    <font color="#804040"><b>end</b></font>
+
+    content
+  <font color="#a020f0">end</font>
+
+  private
+
+<font color="#a020f0">  def </font><font color="#008080">parse</font>
+    header = <font color="#6a5acd">@lines</font>.first
+    <font color="#804040"><b>case</b></font> header
+    <font color="#804040"><b>when</b></font> /^<font color="#6a5acd">Package</font>\s+([a-zA-<font color="#6a5acd">Z_</font>][a-zA-<font color="#6a5acd">Z0</font>-<font color="#ff00ff">9_</font>]*)\s+is<font color="#6a5acd">$/</font>i
+      <font color="#6a5acd">@kind</font>, <font color="#6a5acd">@package</font> =<font color="#6a5acd"> :PACKAGE</font>, <font color="#6a5acd">$1</font>
+    <font color="#804040"><b>when</b></font> /^<font color="#6a5acd">Group</font> is<font color="#6a5acd">$/</font>
+      <font color="#6a5acd">@kind</font> =<font color="#6a5acd"> :GROUP</font>
+    <font color="#804040"><b>else</b></font>
+      <font color="#804040"><b>raise</b></font> <font color="#6a5acd">&quot;</font><font color="#ff00ff">Unsupported CM header format</font><font color="#6a5acd">&quot;</font>
+    <font color="#804040"><b>end</b></font>
+    <font color="#6a5acd">@sources</font> = <font color="#6a5acd">@lines</font>[<font color="#ff00ff">1</font>..-<font color="#ff00ff">1</font>].collect {<font color="#6a5acd">|l|</font>
+      <font color="#6a5acd">Source</font>.new(l, <font color="#6a5acd">@dir</font>)
+    }
+  <font color="#a020f0">end</font>
+<font color="#a020f0">end</font>
+
+<font color="#804040"><b>if</b></font> __FILE__ == <font color="#6a5acd">$0</font>
+<font color="#a020f0">  def </font><font color="#008080">usage</font>
+    <font color="#6a5acd">&quot;</font><font color="#ff00ff">USAGE: </font><font color="#6a5acd">#$0</font><font color="#ff00ff"> cm-file [output-file]</font><font color="#6a5acd">&quot;</font>
+  <font color="#a020f0">end</font>
+
+  cm_file = <font color="#6a5acd">ARGV</font>.shift || (<font color="#804040"><b>raise</b></font> usage)
+
+  output_file = <font color="#6a5acd">ARGV</font>.shift
+<font color="#804040"><b>  if</b></font> output_file.<font color="#ff00ff">nil</font>?
+<font color="#804040"><b>    if</b></font> <font color="#6a5acd">File</font>.exists? <font color="#6a5acd">&quot;</font><font color="#ff00ff">x.sml</font><font color="#6a5acd">&quot;</font>
+      <font color="#804040"><b>raise</b></font> usage
+    <font color="#804040"><b>else</b></font>
+      output_file = <font color="#6a5acd">&quot;</font><font color="#ff00ff">x.sml</font><font color="#6a5acd">&quot;</font>
+    <font color="#804040"><b>end</b></font>
+  <font color="#804040"><b>end</b></font>
+
+  object_files = []
+  c = <font color="#6a5acd">Source</font>.new(cm_file).content(object_files)
+  <font color="#6a5acd">File</font>.open(output_file, <font color="#6a5acd">&quot;</font><font color="#ff00ff">w+</font><font color="#6a5acd">&quot;</font>) {<font color="#6a5acd">|f|</font> f &lt;&lt; c }
+
+  command = <font color="#6a5acd">&quot;</font><font color="#ff00ff">mlton </font><font color="#6a5acd">#{output_file}</font><font color="#ff00ff"> </font><font color="#6a5acd">#{object_files.join(' ')}\n</font><font color="#6a5acd">&quot;</font>
+  print command
+  print <font color="#6a5acd">`</font><font color="#6a5acd">#{command}</font><font color="#6a5acd">`</font>
+<font color="#804040"><b>end</b></font>
+</pre>
+</body>
+</html>

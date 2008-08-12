@@ -1,0 +1,246 @@
+<html>
+<head>
+<title>guugelhupf\src\gh\ds\inv-list.sml</title>
+<meta name="Generator" content="Vim/6.0">
+</head>
+<body bgcolor="#ffffff" text="#000000">
+<pre>
+<font color="#0000ff">(*</font>
+<font color="#0000ff"> * Copyright (c) 2002 Michael Neumann &lt;neumann@s-direktnet.de&gt;</font>
+<font color="#0000ff"> *)</font>
+
+<font color="#804040"><b>structure</b></font><font color="#a020f0"> FrequencyInvertedList</font> <font color="#804040"><b>=</b></font>
+<font color="#a020f0">struct</font>
+   <font color="#804040"><b>structure</b></font><font color="#a020f0"> DocIdMap</font> <font color="#804040"><b>=</b></font> <font color="#a020f0">SplayMapFn</font> (<font color="#a020f0">struct</font>
+                                    <font color="#804040"><b>type</b></font> ord_key <font color="#804040"><b>=</b></font> doc_id
+                                    <font color="#804040"><b>val</b></font> compare <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.compare
+                                    <font color="#a020f0">end</font>)
+
+   <font color="#0000ff">(* posting = occurences of a token in _one_ document *)</font>
+   <font color="#804040"><b>type</b></font> posting <font color="#804040"><b>=</b></font> <font color="#804040"><b>{</b></font>frequency: word ref<font color="#804040"><b>}</b></font>
+
+   <font color="#804040"><b>datatype</b></font> inv_list <font color="#804040"><b>=</b></font> <font color="#ff00ff">T</font> <font color="#804040"><b>of</b></font> <font color="#804040"><b>{</b></font>hashTable: <font color="#804040"><b>(</b></font><font color="#2e8b57"><b>string</b></font>, posting <font color="#a020f0">DocIdMap</font>.map ref<font color="#804040"><b>)</b></font> <font color="#a020f0">HashTable</font>.t<font color="#804040"><b>}</b></font>
+
+   <font color="#804040"><b>exception</b></font> <font color="#ff00ff">NotFound</font>
+
+   <font color="#804040"><b>fun</b></font> new <font color="#804040"><b>{</b></font>hash, size<font color="#804040"><b>}</b></font> <font color="#804040"><b>=</b></font>
+      <font color="#ff00ff">T</font> <font color="#804040"><b>{</b></font>hashTable <font color="#804040"><b>=</b></font> <font color="#a020f0">HashTable</font>.new <font color="#804040"><b>{</b></font>equals <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font>op <font color="#804040"><b>=</b></font><font color="#804040"><b>)</b></font>,
+                                    hash <font color="#804040"><b>=</b></font> hash,
+                                    notFound <font color="#804040"><b>=</b></font> <font color="#ff00ff">NotFound</font>,
+                                    size <font color="#804040"><b>=</b></font> size<font color="#804040"><b>}</b></font> <font color="#804040"><b>}</b></font>
+
+   <font color="#804040"><b>fun</b></font> addToken <font color="#804040"><b>(</b></font><font color="#ff00ff">T</font><font color="#804040"><b>{</b></font>hashTable<font color="#804040"><b>})</b></font> <font color="#804040"><b>(</b></font>docid: doc_id, <font color="#ff00ff">Token</font><font color="#804040"><b>{</b></font>term, position, ...<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font>
+      <font color="#804040"><b>let</b></font>
+         <font color="#804040"><b>val</b></font> map <font color="#804040"><b>=</b></font> <font color="#a020f0">HashTable</font>.lookupOrInsert hashTable <font color="#804040"><b>(</b></font>term, ref <font color="#a020f0">DocIdMap</font>.empty<font color="#804040"><b>)</b></font>
+
+         <font color="#804040"><b>val</b></font> newMap <font color="#804040"><b>=</b></font> <font color="#804040"><b>case</b></font> <font color="#a020f0">DocIdMap</font>.find <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>map, docid<font color="#804040"><b>)</b></font>
+                       <font color="#804040"><b>of</b></font> <font color="#ff00ff">NONE</font> <font color="#804040"><b>=</b></font>&gt; <font color="#a020f0">DocIdMap</font>.insert <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>map, docid, <font color="#804040"><b>{</b></font>frequency <font color="#804040"><b>=</b></font> ref 0w1<font color="#804040"><b>})</b></font>
+                        <font color="#804040"><b>|</b></font> <font color="#ff00ff">SOME</font><font color="#804040"><b>({</b></font>frequency<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font>&gt; <font color="#804040"><b>(</b></font><font color="#a020f0">Word</font>.inc frequency<font color="#804040"><b>;</b></font> <font color="#804040"><b>!</b></font>map<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>in</b></font>
+         map <font color="#804040"><b>:=</b></font> newMap
+      <font color="#804040"><b>end</b></font>
+
+   <font color="#804040"><b>fun</b></font> lookupTerm <font color="#804040"><b>(</b></font><font color="#ff00ff">T</font><font color="#804040"><b>{</b></font>hashTable<font color="#804040"><b>})</b></font> <font color="#804040"><b>(</b></font>term: <font color="#2e8b57"><b>string</b></font><font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+      <font color="#804040"><b>let</b></font>
+         <font color="#804040"><b>val</b></font> map <font color="#804040"><b>=</b></font> <font color="#a020f0">HashTable</font>.find hashTable term
+      <font color="#804040"><b>in</b></font>
+        <font color="#804040"><b>case</b></font> map
+         <font color="#804040"><b>of</b></font> <font color="#ff00ff">NONE</font> <font color="#804040"><b>=</b></font>&gt; <font color="#ff00ff">[]</font>
+          <font color="#804040"><b>|</b></font> <font color="#ff00ff">SOME</font><font color="#804040"><b>(</b></font>m<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>&gt; <font color="#a020f0">DocIdMap</font>.listItemsi <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>m<font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>end</b></font>
+
+   <font color="#804040"><b>fun</b></font> outputTerm <font color="#804040"><b>(</b></font>t as <font color="#ff00ff">T</font><font color="#804040"><b>{</b></font>hashTable<font color="#804040"><b>})</b></font> <font color="#804040"><b>(</b></font>term: <font color="#2e8b57"><b>string</b></font><font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+      <font color="#804040"><b>let</b></font>
+         <font color="#804040"><b>val</b></font> a <font color="#804040"><b>=</b></font> lookupTerm t term
+         <font color="#804040"><b>fun</b></font> outp <font color="#804040"><b>(</b></font>docid, <font color="#804040"><b>{</b></font>frequency<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font>
+            <font color="#804040"><b>let</b></font>
+               <font color="#804040"><b>fun</b></font> w2s w <font color="#804040"><b>=</b></font> <font color="#a020f0">Int</font>.toString <font color="#804040"><b>(</b></font><font color="#a020f0">Word</font>.toInt w<font color="#804040"><b>)</b></font><font color="#804040"><b>;</b></font>
+            <font color="#804040"><b>in</b></font>
+               print <font color="#ff00ff">&quot;  &quot;</font><font color="#804040"><b>;</b></font>
+               print <font color="#804040"><b>(</b></font>w2s docid<font color="#804040"><b>)</b></font><font color="#804040"><b>;</b></font>
+               print <font color="#ff00ff">&quot; =&gt; &quot;</font><font color="#804040"><b>;</b></font>
+               print <font color="#804040"><b>(</b></font>w2s <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>frequency<font color="#804040"><b>))</b></font><font color="#804040"><b>;</b></font>
+               print <font color="#ff00ff">&quot;\n&quot;</font>
+            <font color="#804040"><b>end</b></font>
+      <font color="#804040"><b>in</b></font>
+         <font color="#a020f0">List</font>.app outp a
+      <font color="#804040"><b>end</b></font>
+
+   <font color="#804040"><b>fun</b></font> output <font color="#804040"><b>(</b></font>t as <font color="#ff00ff">T</font><font color="#804040"><b>{</b></font>hashTable<font color="#804040"><b>})</b></font> <font color="#804040"><b>=</b></font>
+      <font color="#804040"><b>let</b></font>
+         <font color="#804040"><b>val</b></font> l <font color="#804040"><b>=</b></font> <font color="#a020f0">HashTable</font>.listItemsi hashTable
+         <font color="#804040"><b>fun</b></font> outp <font color="#804040"><b>(</b></font>k, v<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+         <font color="#804040"><b>let</b></font>
+         <font color="#804040"><b>in</b></font>
+            print k<font color="#804040"><b>;</b></font> print <font color="#ff00ff">&quot;: \n&quot;</font><font color="#804040"><b>;</b></font>
+            outputTerm t k
+         <font color="#804040"><b>end</b></font>
+      <font color="#804040"><b>in</b></font>
+        <font color="#a020f0">List</font>.app outp l
+      <font color="#804040"><b>end</b></font>
+
+   <font color="#804040"><b>local</b></font>
+      <font color="#804040"><b>open</b></font> <font color="#a020f0">Posix.FileSys</font>
+      <font color="#804040"><b>open</b></font> <font color="#a020f0">Posix.IO</font>
+      <font color="#804040"><b>open</b></font> <font color="#a020f0">IO</font>
+
+      <font color="#804040"><b>val</b></font> emptyBucket <font color="#804040"><b>=</b></font> 0wx<font color="#ff00ff">FFFFFFFF</font>  <font color="#0000ff">(* representation of an empty bucket in the file *)</font>
+      <font color="#804040"><b>val</b></font> headerSize <font color="#804040"><b>=</b></font> <font color="#ff00ff">28</font>
+      <font color="#804040"><b>val</b></font> kennung <font color="#804040"><b>=</b></font> <font color="#ff00ff">&quot;FREQ_INV_LIST   &quot;</font>
+      <font color="#804040"><b>val</b></font> version <font color="#804040"><b>=</b></font> 0wx00010000      <font color="#0000ff">(* major = upper word (2-byte), minor = lower *)</font>
+
+      <font color="#804040"><b>fun</b></font> getPos fd <font color="#804040"><b>=</b></font> lseek <font color="#804040"><b>(</b></font>fd, <font color="#ff00ff">0</font>, <font color="#ff00ff">SEEK_CUR</font><font color="#804040"><b>)</b></font>
+      <font color="#804040"><b>fun</b></font> setPos fd <font color="#804040"><b>(</b></font>pos: word<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> lseek <font color="#804040"><b>(</b></font>fd, <font color="#a020f0">Word</font>.toInt pos, <font color="#ff00ff">SEEK_SET</font><font color="#804040"><b>)</b></font>
+
+      <font color="#804040"><b>fun</b></font> readWordAtPos fd pos <font color="#804040"><b>=</b></font> <font color="#804040"><b>(</b></font>setPos fd pos<font color="#804040"><b>;</b></font> readWord fd<font color="#804040"><b>)</b></font>
+   <font color="#804040"><b>in</b></font>
+
+   <font color="#0000ff">(* Important: Use the same hash here as used for creating the index *)</font>
+   <font color="#804040"><b>fun</b></font> lookupTermsInFile <font color="#804040"><b>{</b></font>file, hash, terms: <font color="#2e8b57"><b>string</b></font> <font color="#2e8b57"><b>list</b></font><font color="#804040"><b>}</b></font>  <font color="#804040"><b>=</b></font>
+     <font color="#804040"><b>let</b></font>
+        <font color="#804040"><b>val</b></font> fd <font color="#804040"><b>=</b></font> openf <font color="#804040"><b>(</b></font>file, <font color="#ff00ff">O_RDONLY</font>, 0w0<font color="#804040"><b>)</b></font>
+        <font color="#804040"><b>val</b></font> rKennung <font color="#804040"><b>=</b></font> readString fd <font color="#804040"><b>(</b></font><font color="#a020f0">Word</font>.fromInt <font color="#804040"><b>(</b></font><font color="#a020f0">String</font>.size kennung<font color="#804040"><b>))</b></font>
+        <font color="#804040"><b>val</b></font> rVersion <font color="#804040"><b>=</b></font> readWord fd
+        <font color="#804040"><b>val</b></font> flags <font color="#804040"><b>=</b></font> readWord fd
+        <font color="#804040"><b>val</b></font> indexSize <font color="#804040"><b>=</b></font> readWord fd
+
+        <font color="#804040"><b>val</b></font> mask <font color="#804040"><b>=</b></font> indexSize - 0w1
+
+        <font color="#804040"><b>val</b></font> indexOffs <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.fromInt headerSize
+        <font color="#804040"><b>val</b></font> dataOffs <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.fromInt headerSize + <font color="#804040"><b>(</b></font>indexSize <font color="#804040"><b>*</b></font> 0w4<font color="#804040"><b>)</b></font>
+
+        <font color="#804040"><b>fun</b></font> lookupTerm <font color="#804040"><b>(</b></font>term: <font color="#2e8b57"><b>string</b></font><font color="#804040"><b>)</b></font> : <font color="#804040"><b>(</b></font>doc_id <font color="#804040"><b>*</b></font> word<font color="#804040"><b>)</b></font> <font color="#2e8b57"><b>list</b></font> <font color="#804040"><b>=</b></font>
+           <font color="#804040"><b>let</b></font>
+              <font color="#804040"><b>val</b></font> hv <font color="#804040"><b>=</b></font> hash term
+              <font color="#804040"><b>val</b></font> ix <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.andb <font color="#804040"><b>(</b></font>hv, mask<font color="#804040"><b>)</b></font>
+              <font color="#804040"><b>val</b></font> bucket <font color="#804040"><b>=</b></font> readWordAtPos fd <font color="#804040"><b>(</b></font>indexOffs + ix <font color="#804040"><b>*</b></font> 0w4<font color="#804040"><b>)</b></font>
+
+              <font color="#804040"><b>fun</b></font> readDocs 0w0 <font color="#804040"><b>=</b></font> <font color="#ff00ff">[]</font>
+                <font color="#804040"><b>|</b></font> readDocs n <font color="#804040"><b>=</b></font>
+                 <font color="#804040"><b>let</b></font>
+                    <font color="#804040"><b>val</b></font> docId <font color="#804040"><b>=</b></font> readWord fd
+                    <font color="#804040"><b>val</b></font> freq  <font color="#804040"><b>=</b></font> readWord fd
+                 <font color="#804040"><b>in</b></font>
+                    <font color="#804040"><b>(</b></font>docId, freq<font color="#804040"><b>)</b></font> <font color="#804040"><b>::</b></font> readDocs <font color="#804040"><b>(</b></font>n - 0w1<font color="#804040"><b>)</b></font>
+                 <font color="#804040"><b>end</b></font>
+
+              <font color="#804040"><b>fun</b></font> readToken 0w0 <font color="#804040"><b>=</b></font> <font color="#ff00ff">[]</font>
+                <font color="#804040"><b>|</b></font> readToken n <font color="#804040"><b>=</b></font>
+                 <font color="#804040"><b>let</b></font>
+                    <font color="#804040"><b>val</b></font> numDocs <font color="#804040"><b>=</b></font> readWord fd
+                    <font color="#804040"><b>val</b></font> termSize <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.fromInt <font color="#804040"><b>(</b></font><font color="#a020f0">Word8</font>.toInt <font color="#804040"><b>(</b></font>readWord8 fd<font color="#804040"><b>))</b></font>
+                    <font color="#804040"><b>val</b></font> termText <font color="#804040"><b>=</b></font> readString fd termSize
+                <font color="#804040"><b>in</b></font>
+                    <font color="#804040"><b>if</b></font> termText <font color="#804040"><b>=</b></font> term  <font color="#0000ff">(* found *)</font>
+                       <font color="#804040"><b>then</b></font> readDocs numDocs
+                    <font color="#804040"><b>else</b></font> <font color="#804040"><b>(</b></font>
+                       lseek <font color="#804040"><b>(</b></font>fd, <font color="#ff00ff">8</font> <font color="#804040"><b>*</b></font> <font color="#a020f0">Word</font>.toInt numDocs, <font color="#ff00ff">SEEK_CUR</font><font color="#804040"><b>)</b></font><font color="#804040"><b>;</b></font>
+                       readToken <font color="#804040"><b>(</b></font>n - 0w1<font color="#804040"><b>)</b></font> <font color="#804040"><b>)</b></font>
+                 <font color="#804040"><b>end</b></font>
+
+              <font color="#804040"><b>fun</b></font> readBucket <font color="#ff00ff">()</font> <font color="#804040"><b>=</b></font>
+                 <font color="#804040"><b>let</b></font>
+                    <font color="#804040"><b>val</b></font> numTokens <font color="#804040"><b>=</b></font> readWordAtPos fd <font color="#804040"><b>(</b></font>dataOffs + bucket<font color="#804040"><b>)</b></font>
+                 <font color="#804040"><b>in</b></font>
+                    readToken numTokens
+                 <font color="#804040"><b>end</b></font>
+
+           <font color="#804040"><b>in</b></font>
+              <font color="#804040"><b>if</b></font> bucket <font color="#804040"><b>=</b></font> emptyBucket
+                 <font color="#804040"><b>then</b></font> <font color="#ff00ff">[]</font>
+              <font color="#804040"><b>else</b></font>
+                 readBucket <font color="#ff00ff">()</font>
+           <font color="#804040"><b>end</b></font> <font color="#0000ff">(* lookupTerm *)</font>
+
+     <font color="#804040"><b>in</b></font>
+        <font color="#0000ff">(* check header *)</font>
+        assert <font color="#804040"><b>(</b></font>rKennung <font color="#804040"><b>=</b></font> kennung<font color="#804040"><b>)</b></font><font color="#804040"><b>;</b></font>
+        assert <font color="#804040"><b>(</b></font>rVersion <font color="#804040"><b>=</b></font> version<font color="#804040"><b>)</b></font><font color="#804040"><b>;</b></font>
+        assert <font color="#804040"><b>(</b></font>getPos<font color="#804040"><b>(</b></font>fd<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> headerSize<font color="#804040"><b>)</b></font><font color="#804040"><b>;</b></font>
+
+        <font color="#a020f0">List</font>.map <font color="#804040"><b>(fn</b></font> term <font color="#804040"><b>=</b></font>&gt; <font color="#804040"><b>(</b></font>term, lookupTerm term<font color="#804040"><b>))</b></font> terms
+     <font color="#804040"><b>end</b></font>
+
+   <font color="#804040"><b>fun</b></font> writeToFile <font color="#804040"><b>(</b></font><font color="#ff00ff">T</font><font color="#804040"><b>{</b></font>hashTable<font color="#804040"><b>})</b></font> <font color="#804040"><b>(</b></font>filename: <font color="#2e8b57"><b>string</b></font><font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+      <font color="#804040"><b>let</b></font>
+
+         <font color="#804040"><b>val</b></font> buckets <font color="#804040"><b>=</b></font> <font color="#a020f0">HashTable</font>.getBuckets hashTable
+         <font color="#804040"><b>val</b></font> numBuckets <font color="#804040"><b>=</b></font> <font color="#a020f0">HashTable</font>.numBuckets hashTable
+         <font color="#804040"><b>val</b></font> dataOffs <font color="#804040"><b>=</b></font> headerSize + <font color="#804040"><b>(</b></font>numBuckets<font color="#804040"><b>*</b></font><font color="#ff00ff">4</font><font color="#804040"><b>)</b></font>
+
+         <font color="#804040"><b>val</b></font> fdi <font color="#804040"><b>=</b></font> creat <font color="#804040"><b>(</b></font>filename, <font color="#a020f0">S</font>.irwxu<font color="#804040"><b>)</b></font> <font color="#0000ff">(* write the header and the index (hash) *)</font>
+         <font color="#804040"><b>val</b></font> fdc <font color="#804040"><b>=</b></font> openf <font color="#804040"><b>(</b></font>filename, <font color="#ff00ff">O_WRONLY</font>, 0w0<font color="#804040"><b>)</b></font>  <font color="#0000ff">(* write the content of the inverted list *)</font>
+         <font color="#804040"><b>val</b></font> <font color="#804040"><b>_</b></font> <font color="#804040"><b>=</b></font> setPos fdc <font color="#804040"><b>(</b></font><font color="#a020f0">Word</font>.fromInt dataOffs<font color="#804040"><b>)</b></font> <font color="#0000ff">(* position file pointer after index *)</font>
+
+         <font color="#804040"><b>fun</b></font> writeHeader <font color="#ff00ff">()</font> <font color="#804040"><b>=</b></font>
+            <font color="#804040"><b>let</b></font>
+               <font color="#804040"><b>val</b></font> flags <font color="#804040"><b>=</b></font> 0w0
+               <font color="#804040"><b>val</b></font> indexSize <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.fromInt numBuckets
+            <font color="#804040"><b>in</b></font>
+               writeString fdi kennung<font color="#804040"><b>;</b></font> <font color="#0000ff">(* 16 bytes *)</font>
+               writeWord fdi version<font color="#804040"><b>;</b></font>   <font color="#0000ff">(* 4 bytes *)</font>
+               writeWord fdi flags<font color="#804040"><b>;</b></font>     <font color="#0000ff">(* 4 bytes *)</font>
+               writeWord fdi indexSize<font color="#804040"><b>;</b></font> <font color="#0000ff">(* 4 bytes *)</font>
+
+               assert <font color="#804040"><b>(</b></font>getPos<font color="#804040"><b>(</b></font>fdi<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font> headerSize<font color="#804040"><b>)</b></font>
+            <font color="#804040"><b>end</b></font>
+
+         <font color="#0000ff">(*</font>
+<font color="#0000ff">          * numDocs: word32 </font>
+<font color="#0000ff">          * termSize: word8</font>
+<font color="#0000ff">          * termText: termSize bytes</font>
+<font color="#0000ff">          * </font>
+<font color="#0000ff">          * numDocs times {</font>
+<font color="#0000ff">          *    docId: word32</font>
+<font color="#0000ff">          *    frequency: word32</font>
+<font color="#0000ff">          * }</font>
+<font color="#0000ff">          *)</font>
+         <font color="#804040"><b>fun</b></font> writeToken <font color="#804040"><b>(</b></font>hash: word, termText: <font color="#2e8b57"><b>string</b></font>, docs: posting <font color="#a020f0">DocIdMap</font>.map ref<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+            <font color="#804040"><b>let</b></font>
+              <font color="#804040"><b>val</b></font> numDocs <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.fromInt <font color="#804040"><b>(</b></font><font color="#a020f0">DocIdMap</font>.numItems <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>docs<font color="#804040"><b>))</b></font>
+              <font color="#804040"><b>val</b></font> termSize <font color="#804040"><b>=</b></font> <font color="#a020f0">Word8</font>.fromInt <font color="#804040"><b>(</b></font><font color="#a020f0">String</font>.size termText<font color="#804040"><b>)</b></font>
+              <font color="#804040"><b>fun</b></font> writeDoc <font color="#804040"><b>(</b></font>docId: doc_id, pst: posting<font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+                 <font color="#804040"><b>let</b></font>
+                    <font color="#804040"><b>val</b></font> frequency <font color="#804040"><b>=</b></font> <font color="#804040"><b>!</b></font><font color="#804040"><b>(</b></font>#frequency pst<font color="#804040"><b>)</b></font>
+                 <font color="#804040"><b>in</b></font>
+                    writeWord fdc docId<font color="#804040"><b>;</b></font>
+                    writeWord fdc frequency
+                 <font color="#804040"><b>end</b></font>
+            <font color="#804040"><b>in</b></font>
+               writeWord fdc numDocs<font color="#804040"><b>;</b></font>
+               writeWord8 fdc termSize<font color="#804040"><b>;</b></font>
+               writeString fdc termText<font color="#804040"><b>;</b></font>
+               <font color="#a020f0">List</font>.app writeDoc <font color="#804040"><b>(</b></font><font color="#a020f0">DocIdMap</font>.listItemsi <font color="#804040"><b>(</b></font><font color="#804040"><b>!</b></font>docs<font color="#804040"><b>))</b></font>
+            <font color="#804040"><b>end</b></font>
+
+         <font color="#0000ff">(*</font>
+<font color="#0000ff">          * numTokens: word32    (if numTokens &gt; 0)</font>
+<font color="#0000ff">          *</font>
+<font color="#0000ff">          * numTokens times {</font>
+<font color="#0000ff">          *   see writeToken</font>
+<font color="#0000ff">          * }</font>
+<font color="#0000ff">          *)</font>
+         <font color="#804040"><b>fun</b></font> writeBucket <font color="#804040"><b>(</b></font>lst : <font color="#804040"><b>(</b></font>word <font color="#804040"><b>*</b></font> <font color="#2e8b57"><b>string</b></font> <font color="#804040"><b>*</b></font> posting <font color="#a020f0">DocIdMap</font>.map ref<font color="#804040"><b>)</b></font> <font color="#2e8b57"><b>list</b></font><font color="#804040"><b>)</b></font> <font color="#804040"><b>=</b></font>
+            <font color="#804040"><b>let</b></font>
+               <font color="#804040"><b>val</b></font> numTokens <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.fromInt <font color="#804040"><b>(</b></font><font color="#a020f0">List</font>.length lst<font color="#804040"><b>)</b></font>
+               <font color="#804040"><b>val</b></font> offs <font color="#804040"><b>=</b></font> <font color="#a020f0">Word</font>.fromInt <font color="#804040"><b>(</b></font>getPos fdc - dataOffs<font color="#804040"><b>)</b></font>
+            <font color="#804040"><b>in</b></font>
+               <font color="#804040"><b>if</b></font> numTokens <font color="#804040"><b>=</b></font> 0w0 <font color="#804040"><b>then</b></font>
+                  writeWord fdi emptyBucket
+               <font color="#804040"><b>else</b></font> <font color="#804040"><b>(</b></font>
+                  writeWord fdi offs<font color="#804040"><b>;</b></font>
+                  writeWord fdc numTokens<font color="#804040"><b>;</b></font>
+                  <font color="#a020f0">List</font>.app writeToken lst
+               <font color="#804040"><b>)</b></font>
+            <font color="#804040"><b>end</b></font>
+
+      <font color="#804040"><b>in</b></font>
+         writeHeader <font color="#ff00ff">()</font><font color="#804040"><b>;</b></font>
+         <font color="#a020f0">Array</font>.app writeBucket buckets
+      <font color="#804040"><b>end</b></font>
+
+      <font color="#804040"><b>end</b></font> <font color="#0000ff">(* local *)</font>
+<font color="#a020f0">end</font>
+</pre>
+</body>
+</html>
